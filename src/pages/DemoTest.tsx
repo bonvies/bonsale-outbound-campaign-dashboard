@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 
 const HTTP_HOST = import.meta.env.VITE_HTTP_HOST || 'http://localhost:3020';
-const WS_HOST = import.meta.env.VITE_WS_HOST ||  'ws://localhost:3021';
+const WS_HOST = import.meta.env.VITE_WS_PORT_OUTBOUND_CAMPAIGM ||  'ws://localhost:3021';
 
 function DemoTest() {
   const [clientId, setClientId] = useState('');
@@ -89,7 +89,7 @@ function DemoTest() {
     };
 
     try {
-      const result = await axios.post(`${HTTP_HOST}/api/hangup`, {
+      const result = await axios.post(`${HTTP_HOST}/callControl/hangup`, {
         dn: currentDnnumber,
         id: currentParticipantId,
         token_3cx: token_3cx, // 這裡需要傳入 token_3cx

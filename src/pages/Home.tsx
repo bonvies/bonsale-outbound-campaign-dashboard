@@ -8,9 +8,11 @@ import { useNavigate } from 'react-router-dom'
 
 
 const HTTP_HOST = import.meta.env.VITE_HTTP_HOST || 'http://localhost:3020';
-// const WS_HOST = import.meta.env.VITE_WS_HOST ||  'ws://localhost:3021';
+const WS_HOST = import.meta.env.VITE_WS_PORT_OUTBOUND_CAMPAIGM_V2 ||  'ws://localhost:3022';
 
 type ProjectOutboundDataType = {
+  appId: string
+  appSecret: string
   projectId: string
   projectName: string
   callStatus: number
@@ -30,12 +32,14 @@ function Home() {
     });
 
     try {
-      const response = await axios.get(`${HTTP_HOST}/api/bonsale/auto-dial?${queryString}`);
+      const response = await axios.get(`${HTTP_HOST}/bonsale/auto-dial?${queryString}`);
       const dataList = response.data.list;
       console.log('Project Auto Dial Data:', dataList);
       setProjectOutboundData(
         dataList.map(item => (
           {
+            appId: item.appId,
+            appSecret: item.appSecret,
             projectId: item.projectId,
             projectName: item.projectInfo.projectName,
             callStatus: 0,
@@ -65,20 +69,40 @@ function Home() {
         return { state: '未知狀態', color: 'default' };
     }
   };
-  const starOutbound = async (projectId: string, pbxBaseUrl:string, appId:string, appSecret:string, ) => {
+  
+  const starOutbound = async (projectId: string, appId:string, appSecret:string ) => {
     try {
       // 先取得要撥打的電話號碼清單
-      const customers = await axios.get(`${HTTP_HOST}/api/bonsale/project?projectIds=${projectId}`);
+      const customers = await axios.get(`${HTTP_HOST}/bonsale/project?projectIds=${projectId}`);
       const phoneNumbers = customers.data.list.map((customer) => customer.customer.phone);
       console.log('PhoneNumbers:', phoneNumbers);
 
+      // 建立 WebSocket 連線
+      const ws = new WebSocket(WS_HOST);
+        ws.onopen = () => {
+          console.log('WebSocket connection established');
+        };
+
+        ws.onmessage = (event) => {
+          const message = JSON.parse(event.data);
+          console.log('WebSocket message received:', message);
+        };
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = () => {
+          console.log('WebSocket connection closed');
+        };
+
       // 撥打電話
-      // const result = await axios.post(`${HTTP_HOST}/outboundCampaigm`, {
-      //   "grant_type": "client_credentials",
-      //   "client_id": "leo",
-      //   "client_secret": "e6DNBnb4w8E6a29PDB46Jqa8UXn71Sga",
-      //   "phones": "0915970815"
-      // });
+      await axios.post(`${HTTP_HOST}/outboundCampaigm/v2`, {
+        grant_type: "client_credentials",
+        client_id: appId,
+        client_secret: appSecret,
+        phone: phoneNumbers[1]
+      });
 
     } catch (error) {
       console.error('Error starting outbound:', error);
@@ -123,7 +147,7 @@ function Home() {
               </TableCell>
               <TableCell align='center' sx={{ width: '20px' }}>
                 {item.callStatus === 0 ? 
-                  <IconButton onClick={() => starOutbound(item.projectId) }>
+                  <IconButton onClick={() => starOutbound(item.projectId, item.appId, item.appSecret) }>
                     <PlayArrowIcon />
                   </IconButton> : 
                   <IconButton>
