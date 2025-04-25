@@ -69,13 +69,23 @@ function Home() {
         return { state: '未知狀態', color: 'default' };
     }
   };
+
+  const handleStarOutbound = async (projectId: string, appId:string, appSecret:string ) => {
+        // 先取得要撥打的電話號碼清單
+        const customers = await axios.get(`${HTTP_HOST}/bonsale/project?projectIds=${projectId}`);
+        const phoneNumbers = customers.data.list.map((customer) => customer.customer.phone);
+        console.log('PhoneNumbers:', phoneNumbers);
+
+        // 撥打電話
+        await starOutbound(phoneNumbers[0], appId, appSecret);
+  };
   
-  const starOutbound = async (projectId: string, appId:string, appSecret:string ) => {
+  const starOutbound = async (phone: string, appId:string, appSecret:string ) => {
     try {
-      // 先取得要撥打的電話號碼清單
-      const customers = await axios.get(`${HTTP_HOST}/bonsale/project?projectIds=${projectId}`);
-      const phoneNumbers = customers.data.list.map((customer) => customer.customer.phone);
-      console.log('PhoneNumbers:', phoneNumbers);
+      // // 先取得要撥打的電話號碼清單
+      // const customers = await axios.get(`${HTTP_HOST}/bonsale/project?projectIds=${projectId}`);
+      // const phoneNumbers = customers.data.list.map((customer) => customer.customer.phone);
+      // console.log('PhoneNumbers:', phoneNumbers);
 
       // 建立 WebSocket 連線
       const ws = new WebSocket(WS_HOST);
@@ -86,6 +96,11 @@ function Home() {
         ws.onmessage = (event) => {
           const message = JSON.parse(event.data);
           console.log('WebSocket message received:', message);
+          if (!message.isCalling) {
+            console.log('撥打完成');
+            ws.close();
+            return;
+          }
         };
 
         ws.onerror = (error) => {
@@ -101,7 +116,7 @@ function Home() {
         grant_type: "client_credentials",
         client_id: appId,
         client_secret: appSecret,
-        phone: phoneNumbers[1]
+        phone: phone
       });
 
     } catch (error) {
@@ -129,6 +144,9 @@ function Home() {
           <TableCell align='center' sx={{ width: '20px' }}>
             動作
           </TableCell>
+          <TableCell align='center' sx={{ width: '20px' }}>
+            撥打狀況
+          </TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
@@ -147,7 +165,7 @@ function Home() {
               </TableCell>
               <TableCell align='center' sx={{ width: '20px' }}>
                 {item.callStatus === 0 ? 
-                  <IconButton onClick={() => starOutbound(item.projectId, item.appId, item.appSecret) }>
+                  <IconButton onClick={() => handleStarOutbound(item.projectId, item.appId, item.appSecret) }>
                     <PlayArrowIcon />
                   </IconButton> : 
                   <IconButton>
@@ -157,6 +175,9 @@ function Home() {
                 <IconButton onClick={() => navigate(`/project/${item.projectId}`)}>
                   <InfoOutlineIcon />
                 </IconButton>
+              </TableCell>
+              <TableCell align='center' sx={{ width: '20px' }}>
+
               </TableCell>
             </TableRow>
           );
