@@ -85,7 +85,7 @@ function Home() {
   const starOutbound = async (projectId: string, phone: string, appId: string, appSecret: string): Promise<void> => {
     try {
       // 撥打電話
-      const result = await axios.post(`${HTTP_HOST}/outboundCampaigm/v2`, {
+      const result = await axios.post(`${HTTP_HOST}/projectOutbound`, {
         grant_type: "client_credentials",
         client_id: appId,
         client_secret: appSecret,
