@@ -5,7 +5,6 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import InfoOutlineIcon from '@mui/icons-material/InfoOutline';
 import { useNavigate } from 'react-router-dom'
-import Project from './Project';
 
 const HTTP_HOST = import.meta.env.VITE_HTTP_HOST || 'http://localhost:3020';
 const WS_HOST = import.meta.env.VITE_WS_PORT_OUTBOUND_CAMPAIGM_V2 ||  'ws://localhost:3022';
@@ -90,6 +89,8 @@ function Home() {
         return { state: '執行完成', color: 'success' };
       case 3:
         return { state: '執行失敗', color: 'error' };
+      case 4:
+        return { state: '暫停執行', color: 'warning' };
       default:
         return { state: '未知狀態', color: 'default' };
     }
@@ -109,6 +110,18 @@ function Home() {
     } catch (error) {
       console.error('Error starting outbound:', error);
     };
+  };
+
+  const pauseOutbound = (projectId: string) => {
+    const project = projectOutboundData.find(item => item.projectId === projectId);
+    if (project) {
+      // 更新專案狀態為暫停
+      setProjectOutboundData(prev =>
+        prev.map(item =>
+          item.projectId === projectId ? { ...item, callStatus: 4 } : item
+        )
+      );
+    }
   };
 
   const handleStarOutbound = async (projectId: string, appId: string, appSecret: string) => {
@@ -141,6 +154,10 @@ function Home() {
       );
     }
   };
+
+  const handlePauseOutbound = (projectId: string) => {
+    pauseOutbound(projectId);
+  }
 
   const connectWebSocket = useCallback(() => {
     ws.onopen = () => {
@@ -272,11 +289,11 @@ function Home() {
               </TableCell>
               <TableCell align='center'>
                 <Stack direction='row'>
-                  {item.callStatus === 0 ? 
+                  {item.callStatus === 0 || item.callStatus === 4 ? 
                     <IconButton onClick={() => handleStarOutbound(item.projectId, item.appId, item.appSecret) }>
                       <PlayArrowIcon />
                     </IconButton> : 
-                    <IconButton>
+                    <IconButton onClick={() => handlePauseOutbound(item.projectId) } disabled={item.projectCallState !== 'calling' || !item.projectCallData?.activeCall}>
                       <PauseIcon /> 
                     </IconButton> 
                   }
