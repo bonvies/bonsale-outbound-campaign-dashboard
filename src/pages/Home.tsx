@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableRow, IconButton, Chip, Stack, Collapse } from '@mui/material';
+import { Table, TableBody, TableCell, TableHead, TableRow, IconButton, Chip, Stack, Collapse, Typography, Box } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import InfoOutlineIcon from '@mui/icons-material/InfoOutline';
@@ -11,7 +11,47 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 const HTTP_HOST = import.meta.env.VITE_HTTP_HOST || 'http://localhost:3020';
 const WS_HOST = import.meta.env.VITE_WS_PORT_OUTBOUND_CAMPAIGM_V2 ||  'ws://localhost:3022';
 
-function Home() {
+function CustomerDetailsTable({ projectCustomersDesc }: { projectCustomersDesc: ProjectCustomersDesc[] }) {
+  return (
+    <Table size="small" sx={{ marginTop: '16px' }}>
+      <TableHead>
+        <TableRow>
+          <TableCell>客戶姓名</TableCell>
+          <TableCell>電話</TableCell>
+          <TableCell>撥打狀態</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {projectCustomersDesc.map((desc, index) => (
+          <TableRow key={index}>
+            <TableCell>{desc.customer?.memberName || '未知'}</TableCell>
+            <TableCell>{desc.customer?.phone || '無電話'}</TableCell>
+            <TableCell>
+            <Chip
+              label={
+                desc.callStatus === 0 ? '初始值' : 
+                desc.callStatus === 1 ? '成功接通' :
+                desc.callStatus === 2 ? '不成功接通' : 
+                '未知的狀態'
+              }
+              color={
+                desc.callStatus === 0 ? 'default' : 
+                desc.callStatus === 1 ? 'success' :
+                desc.callStatus === 2 ? 'error' : 
+                'default'
+              }
+              size="small"
+              sx={{ marginBottom: '4px' }}
+            />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+};
+
+export default function Home() {
   const navigate = useNavigate();
   const wsRef = useRef<WebSocket | null>(null); // 使用 useRef 管理 WebSocket 實例
 
@@ -25,7 +65,7 @@ function Home() {
       });
       const response = await axios.get(`${HTTP_HOST}/bonsale/auto-dial?${queryString}`);
       const dataList = response.data.list;
-      console.log('Project Auto Dial Data:', dataList);
+      // console.log('Project Auto Dial Data:', dataList);
 
       // 將資料轉換為符合專案撥打狀態的格式
       const updatedData = await Promise.all(
@@ -107,10 +147,8 @@ function Home() {
       // 這邊是從未執行開始的行為
       // 取得要撥打的電話號碼清單
       const phoneNumbers = project.projectCustomersDesc.map((projectCustomer: ProjectCustomersDesc) => projectCustomer.customer.phone);
-      console.log('PhoneNumbers:', phoneNumbers);
 
       // 找到該專案
-
       if (project?.callStatus === 0) {
         try {
           const toCall: ToCallResponse = await starOutbound(project.projectId, phoneNumbers[0], appId, appSecret);
@@ -253,6 +291,11 @@ function Home() {
       [projectId]: !prev[projectId],
     }));
   };
+
+  // 打印出來看資料格式
+  useEffect(() => {
+    console.log('projectOutboundData:', projectOutboundData);
+  }, [projectOutboundData]);
 
   useEffect(() => {
     getProjectOutboundData();
@@ -433,12 +476,14 @@ function Home() {
                 </TableCell>
               </TableRow>
               <TableRow>
-                <TableCell colSpan={7} style={{ paddingBottom: 0, paddingTop: 0 }}>
+                <TableCell colSpan={7} sx={{ paddingBottom: 0, paddingTop: 0 }}>
                   <Collapse in={isOpen} timeout="auto" unmountOnExit>
-                    <div style={{ margin: '16px' }}>
-                      <strong>詳細資訊:</strong>
-                      <pre>{JSON.stringify(item, null, 2)}</pre>
-                    </div>
+                    <Box sx={{ margin: '16px' }}>
+                      <Typography variant="h6" gutterBottom>
+                        詳細資訊
+                      </Typography>
+                      <CustomerDetailsTable projectCustomersDesc={item.projectCustomersDesc} />
+                    </Box>
                   </Collapse>
                 </TableCell>
               </TableRow>      
@@ -448,6 +493,4 @@ function Home() {
       </TableBody>
     </Table>
   );
-}
-
-export default Home;
+};
