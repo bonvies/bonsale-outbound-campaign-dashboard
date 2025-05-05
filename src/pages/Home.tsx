@@ -18,34 +18,37 @@ function Home() {
   const [projectOutboundData, setProjectOutboundData] = useState<ProjectOutboundDataType[]>([]);
 
   const getProjectOutboundData = useCallback(async () => {
-    const queryString = new URLSearchParams({
-      isEnable: '1',
-      limit: '-1',
-    });
-
     try {
+      const queryString = new URLSearchParams({
+        isEnable: '1',
+        limit: '-1',
+      });
       const response = await axios.get(`${HTTP_HOST}/bonsale/auto-dial?${queryString}`);
       const dataList = response.data.list;
       console.log('Project Auto Dial Data:', dataList);
 
       // 將資料轉換為符合專案撥打狀態的格式
-      setProjectOutboundData(
-        dataList.map((item: Project) => (
-          {
+      const updatedData = await Promise.all(
+        dataList.map(async (item: Project) => {
+          // 將專案中的客戶電話號碼提取出來
+          const customers = await axios.get(`${HTTP_HOST}/bonsale/project?projectIds=${item.projectId}`);
+          const projectCustomersDesc = customers.data.list.map((customer: Project) => customer);
+
+          return {
             appId: item.appId,
             appSecret: item.appSecret,
             projectId: item.projectId,
             projectName: item.projectInfo.projectName,
             callStatus: 0,
             extension: item.callFlow.phone,
-            projectCustomers: item.projectCustomers,
-            phoneNumbers: [], // 初始化為空
+            projectCustomersDesc,
             currentCallIndex: 0, 
             projectCallState: 'init', // 撥打狀態
             projectCallData: null // 撥打資料,
-          }
-        ))
+          };
+        })
       );
+      setProjectOutboundData(updatedData);
       return response.data;
     } catch (error) {
       console.error('Error fetching project auto-dial data:', error);
@@ -103,8 +106,7 @@ function Home() {
     try {
       // 這邊是從未執行開始的行為
       // 取得要撥打的電話號碼清單
-      const customers = await axios.get(`${HTTP_HOST}/bonsale/project?projectIds=${project.projectId}`);
-      const phoneNumbers = customers.data.list.map((customer: Project) => customer.customer.phone);
+      const phoneNumbers = project.projectCustomersDesc.map((projectCustomer: ProjectCustomersDesc) => projectCustomer.customer.phone);
       console.log('PhoneNumbers:', phoneNumbers);
 
       // 找到該專案
@@ -119,7 +121,7 @@ function Home() {
           // 更新專案狀態為執行中
           setProjectOutboundData(prev =>
             prev.map(item =>
-              item.projectId === project.projectId ? { ...item, callStatus: 1, phoneNumbers, currentCallIndex: 0, currentCallId: callid } : item
+              item.projectId === project.projectId ? { ...item, callStatus: 1, currentCallIndex: 0, currentCallId: callid } : item
             )
           );
           return;
@@ -137,7 +139,7 @@ function Home() {
         // 這邊是從暫停開始的行為
         setProjectOutboundData(prev =>
           prev.map(item =>
-            item.projectId === project.projectId ? { ...item, callStatus: 1, phoneNumbers } : item
+            item.projectId === project.projectId ? { ...item, callStatus: 1 } : item
           )
         );
       }
@@ -198,7 +200,7 @@ function Home() {
             prev.map(prevItem => {
               const nextCallIndex = prevItem.currentCallIndex + 1;
               if (prevItem.projectCallState === 'waiting') {
-                if (prevItem.phoneNumbers.length < nextCallIndex) {
+                if (prevItem.projectCustomersDesc.length < nextCallIndex) {
                   console.log('撥打電話號碼已經撥打完畢');
                   return {
                     ...prevItem,
@@ -207,9 +209,10 @@ function Home() {
                   }
                 }
 
-                if(prevItem.phoneNumbers[nextCallIndex]) {
-                  starOutbound(prevItem.projectId, prevItem.phoneNumbers[nextCallIndex], prevItem.appId, prevItem.appSecret);
-                  console.log('撥打電話號碼:', prevItem.phoneNumbers[nextCallIndex]);
+                if(prevItem.projectCustomersDesc[nextCallIndex]) {
+                  const nextCall = prevItem.projectCustomersDesc[nextCallIndex].customer.phone // 下一個撥打電話號碼
+                  starOutbound(prevItem.projectId, nextCall, prevItem.appId, prevItem.appSecret);
+                  console.log('撥打電話號碼:', nextCall);
                 }
 
                 return {
@@ -336,7 +339,7 @@ function Home() {
                   <Stack>
                     <Chip
                       label={
-                        item.phoneNumbers?.length < item.currentCallIndex + 1 ? '門號序列' :  
+                        item.projectCustomersDesc?.length < item.currentCallIndex + 1 ? '沒有門號' :
                         `第 ${item.currentCallIndex + 1} 隻門號`
                       }
                       variant="outlined"
