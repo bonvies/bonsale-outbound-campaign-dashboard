@@ -211,67 +211,65 @@ export default function Home() {
       // websocket 會回傳一個陣列，裡面是我送出專案撥打電話的請求 每隔 3 秒 回傳他撥打活躍的狀態
       const message = JSON.parse(event.data);
       console.log('WebSocket message received:', message);
-      projectOutboundData.forEach((item) => {
-        if (item.callStatus !== 1 ) return; // 如果專案狀態不是執行中，則不處理
-        // 尋找當前專案的撥打資料
-        const projectCallData = message.find((call: Call) => {
-          console.log('call:', call);
-          return call.projectId === item.projectId;
-        });
-        console.log('projectCallData:', projectCallData);
 
-        // 更新專案狀態
-        setProjectOutboundData(prev =>
-          prev.map(prevItem =>
-            prevItem.projectId === item.projectId ? 
-            { 
-              ...prevItem,
-              projectCallState: projectCallData ? 'calling' :'waiting',
-              projectCallData
-            } : prevItem
-          )
-        );
+      setProjectOutboundData(prevProjectOutboundData => {
+        return prevProjectOutboundData
+          .map((item) => {
+            if (item.callStatus !== 1) return item; // 如果專案狀態不是執行中，則不處理
 
-        // 這邊是 item 的舊值，用於比較和更新專案的撥打狀態
-        if (item.projectCallState === 'waiting') {
-          setProjectOutboundData(prev => 
-            prev.map(prevItem => {
-              const nextCallIndex = prevItem.currentCallIndex + 1;
-              if (prevItem.projectCallState === 'waiting') {
-                if (prevItem.projectCustomersDesc.length < nextCallIndex) {
-                  console.log('撥打電話號碼已經撥打完畢');
-                  return {
-                    ...prevItem,
-                    callStatus: 2, // 更新專案狀態為執行完成
-                    projectCallState: 'finish' // 更新撥打狀態
-                  }
-                }
+          // 尋找當前專案的撥打資料
+          const projectCallData = message.find((call: Call) => {
+            return call.projectId === item.projectId;
+          });
+          // console.log('projectCallData:', projectCallData);
 
-                if(prevItem.projectCustomersDesc[nextCallIndex]) {
-                  const nextCall = prevItem.projectCustomersDesc[nextCallIndex].customer.phone // 下一個撥打電話號碼
-                  starOutbound(prevItem.projectId, nextCall, prevItem.appId, prevItem.appSecret);
-                  console.log('撥打電話號碼:', nextCall);
-                }
+          // 更新專案狀態
+          if (projectCallData) {
+            return {
+              ...item,
+              projectCallState: 'calling',
+              projectCallData,
+            }; 
+          } else if (item.currentCallIndex + 1 === item.projectCustomersDesc.length) { // item.currentCallIndex + 1 是因為從 0 開始計算
+            // 將先前的撥打狀態記錄到 projectCustomersDesc 中 
+            const updatedCustomersDesc = [...item.projectCustomersDesc];
+            updatedCustomersDesc[item.currentCallIndex] = {
+              ...updatedCustomersDesc[item.currentCallIndex],
+              callStatus: item.projectCallData?.activeCall?.Status === 'Talking' ? 1 : 2, // 更新撥打狀態為初始值
+            };
 
-                return {
-                  ...prevItem,
-                  currentCallIndex: nextCallIndex, // 將 currentCallIndex 增加
-                  projectCallState: 'calling' 
-                }
-              }
+            // TODO 這邊可以發送 API 請求到後端，更新撥打狀態...
+            
+            return {
+              ...item,
+              projectCallState: 'finish', // 更新撥打狀態
+              callStatus: 2, // 更新專案狀態為執行完成
+              projectCallData,
+              projectCustomersDesc: updatedCustomersDesc
+            };
+          } else {
+            const nextCallIndex = item.currentCallIndex + 1;
+            starOutbound(item.projectId, item.projectCustomersDesc[nextCallIndex].customer.phone, item.appId, item.appSecret);
 
-              return prevItem.projectId === item.projectId
-                ? { 
-                    ...prevItem,
-                    currentCallIndex: nextCallIndex, // 將 currentCallIndex 增加
-                    projectCallState: 'waiting...' 
-                  }
-                : prevItem
-              } 
-            )
-          );
-        }
-      })
+            // 將先前的撥打狀態記錄到 projectCustomersDesc 中 
+            const updatedCustomersDesc = [...item.projectCustomersDesc];
+            updatedCustomersDesc[item.currentCallIndex] = {
+              ...updatedCustomersDesc[item.currentCallIndex],
+              callStatus: item.projectCallData?.activeCall?.Status === 'Talking' ? 1 : 2, // 更新撥打狀態為初始值
+            };
+
+            // TODO 這邊可以發送 API 請求到後端，更新撥打狀態...
+
+            return {
+              ...item,
+              projectCallState: 'waiting',
+              currentCallIndex: nextCallIndex, // 將 currentCallIndex 增加
+              projectCallData,
+              projectCustomersDesc: updatedCustomersDesc
+            };
+          }
+          })
+      });
     };
 
     wsRef.current.onerror = (error) => {
@@ -281,7 +279,7 @@ export default function Home() {
     wsRef.current.onclose = () => {
       console.log('WebSocket connection closed');
     };
-  }, [projectOutboundData]);
+  }, []);
 
   const [openRows, setOpenRows] = useState<Record<string, boolean>>({}); // 用於跟踪每行的展開狀態
 
@@ -293,9 +291,9 @@ export default function Home() {
   };
 
   // 打印出來看資料格式
-  useEffect(() => {
-    console.log('projectOutboundData:', projectOutboundData);
-  }, [projectOutboundData]);
+  // useEffect(() => {
+  //   console.log('projectOutboundData:', projectOutboundData);
+  // }, [projectOutboundData]);
 
   useEffect(() => {
     getProjectOutboundData();
@@ -336,13 +334,13 @@ export default function Home() {
         </TableRow>
       </TableHead>
       <TableBody>
-        {projectOutboundData.map((item, index) => {
+        {projectOutboundData.map((item) => {
           const { state, color } = getCallStatusInfo(item.callStatus);
           const isOpen = openRows[item.projectId] || false;
 
           return (
-            <Fragment key={index}>
-              <TableRow key={index}>
+            <Fragment key={item.projectId}>
+              <TableRow key={item.projectId}>
                 <TableCell align="center">
                   <IconButton onClick={() => toggleRow(item.projectId)}>
                     {isOpen ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
@@ -383,7 +381,7 @@ export default function Home() {
                     <Chip
                       label={
                         item.projectCustomersDesc?.length < item.currentCallIndex + 1 ? '沒有門號' :
-                        `第 ${item.currentCallIndex + 1} 隻門號`
+                        `門號進度: ${item.currentCallIndex + 1} / ${item.projectCustomersDesc?.length}`
                       }
                       variant="outlined"
                       size="small"
@@ -478,7 +476,7 @@ export default function Home() {
               <TableRow>
                 <TableCell colSpan={7} sx={{ paddingBottom: 0, paddingTop: 0 }}>
                   <Collapse in={isOpen} timeout="auto" unmountOnExit>
-                    <Box sx={{ margin: '16px' }}>
+                    <Box sx={{ margin: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px', padding: '16px' }}>
                       <Typography variant="h6" gutterBottom>
                         詳細資訊
                       </Typography>
@@ -486,7 +484,7 @@ export default function Home() {
                     </Box>
                   </Collapse>
                 </TableCell>
-              </TableRow>      
+              </TableRow>
             </Fragment>
           );
         })}
