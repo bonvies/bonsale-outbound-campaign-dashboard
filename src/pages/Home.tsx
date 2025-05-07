@@ -77,6 +77,7 @@ export default function Home() {
           return {
             appId: item.appId,
             appSecret: item.appSecret,
+            callFlowId: item.callFlowId,
             projectId: item.projectId,
             projectName: item.projectInfo.projectName,
             callStatus: 0,
@@ -152,17 +153,41 @@ export default function Home() {
     }
   };
 
-  const handleStarOutbound = async (project: ProjectOutboundDataType, appId: string, appSecret: string) => {
-    try {
-      // 這邊是從未執行開始的行為
-      // 取得要撥打的電話號碼清單
-      const phoneNumbers = project.projectCustomersDesc.map((projectCustomer: ProjectCustomersDesc) => projectCustomer.customer.phone);
+  const handleStarOutbound = useCallback(async (project: ProjectOutboundDataType, appId: string, appSecret: string) => {
+    // 如果是暫停的話 改變狀態就好 
+    if (project?.callStatus === 4) {
+      // 更新專案狀態為執行中
+      setProjectOutboundData(prev =>
+        prev.map(item =>
+          item.projectId === project.projectId ? { ...item, callStatus: 1 } : item
+        )
+      );
+    }
 
-      // 找到該專案
-      if (project?.callStatus === 0) {
-        try {
-          const toCall: ToCallResponse = await starOutbound(project.projectId, phoneNumbers[0], appId, appSecret);
-
+    // 如果該專案是 未執行
+    if (project?.callStatus === 0 || project?.callStatus === 1) {
+      try {
+        // 取得要撥打的資料
+        const { projectId, callFlowId } = project;
+        console.log('projectId:', projectId);
+        console.log('callFlowId:', callFlowId);
+ 
+        // 先取得 callStatus: 0 的資料
+        const firstOutboundQueryString = new URLSearchParams({
+          callFlowIdOutbound: callFlowId,
+          projectIdOutbound: projectId,
+          limit: '1',
+          callStatus: '0',
+        });
+        const firstOutboundResult = await axios.get(`${HTTP_HOST}/bonsale/outbound?${firstOutboundQueryString}`);
+        const firstOutboundData = firstOutboundResult.data.list
+ 
+        console.log('firstOutboundData:', firstOutboundData);
+        if (firstOutboundData.length > 0) {
+          // 如果有資料 就撥打電話
+          const { phone } = firstOutboundData[0].customer; 
+          const toCall: ToCallResponse = await starOutbound(project.projectId, phone, appId, appSecret);
+  
           // 撥打電話的時候 會回傳 一個 callid 我們可以利用這個 callid 來查詢當前的撥打狀態
           const { callid } = toCall.currentCall?.result ?? {};
     
@@ -172,36 +197,90 @@ export default function Home() {
               item.projectId === project.projectId ? { ...item, callStatus: 1, currentCallIndex: 0, currentCallId: callid } : item
             )
           );
-          return;
-        } catch (error) {
-          console.error('Error fetching project customers:', error);
-          // 更新專案狀態為執行失敗並清空 currentPhone
-          setProjectOutboundData(prev =>
-            prev.map(item =>
-              item.projectId === project.projectId ? { ...item, callStatus: 3 } : item
-            )
-          );
-          return;
-        }
-      } else {
-        // 這邊是從暫停開始的行為
-        setProjectOutboundData(prev =>
-          prev.map(item =>
-            item.projectId === project.projectId ? { ...item, callStatus: 1 } : item
-          )
-        );
-      }
+  
+        } else {
+          // 如果沒有資料 就取得 callStatus: 2 的資料
+          const secondOutboundQueryString = new URLSearchParams({
+            callFlowIdOutbound: callFlowId,
+            projectIdOutbound: projectId,
+            limit: '2',
+            callStatus: '0',
+          });
+          const secondOutboundResult = await axios.get(`${HTTP_HOST}/bonsale/outbound?${secondOutboundQueryString}`);
+          const secondOutboundData = secondOutboundResult.data.list
+          console.log('secondOutboundData:', secondOutboundData);
 
-    } catch (error) {
-      console.error('Error in batch outbound:', error);
-      // 更新專案狀態為執行失敗並清空 currentPhone
-      setProjectOutboundData(prev =>
-        prev.map(item =>
-          item.projectId === project.projectId ? { ...item, callStatus: 3 } : item
-        )
-      );
+          if (secondOutboundData.length > 0) {
+            // 如果有資料 就撥打電話
+            const { phone } = secondOutboundData[0].customer.phone; 
+            const toCall: ToCallResponse = await starOutbound(project.projectId, phone, appId, appSecret);
+    
+            // 撥打電話的時候 會回傳 一個 callid 我們可以利用這個 callid 來查詢當前的撥打狀態
+            const { callid } = toCall.currentCall?.result ?? {};
+      
+            // 更新專案狀態為執行中
+            setProjectOutboundData(prev =>
+              prev.map(item =>
+                item.projectId === project.projectId ? { ...item, callStatus: 1, currentCallId: callid } : item
+              )
+            );
+          }
+        }
+
+
+ 
+       
+ 
+       return
+       // 這邊是從未執行開始的行為
+       // 取得要撥打的電話號碼清單
+       const phoneNumbers = project.projectCustomersDesc.map((projectCustomer: ProjectCustomersDesc) => projectCustomer.customer.phone);
+ 
+       // 找到該專案
+       if (project?.callStatus === 0) {
+         try {
+           const toCall: ToCallResponse = await starOutbound(project.projectId, phoneNumbers[0], appId, appSecret);
+ 
+           // 撥打電話的時候 會回傳 一個 callid 我們可以利用這個 callid 來查詢當前的撥打狀態
+           const { callid } = toCall.currentCall?.result ?? {};
+     
+           // 更新專案狀態為執行中
+           setProjectOutboundData(prev =>
+             prev.map(item =>
+               item.projectId === project.projectId ? { ...item, callStatus: 1, currentCallIndex: 0, currentCallId: callid } : item
+             )
+           );
+           return;
+         } catch (error) {
+           console.error('Error fetching project customers:', error);
+           // 更新專案狀態為執行失敗並清空 currentPhone
+           setProjectOutboundData(prev =>
+             prev.map(item =>
+               item.projectId === project.projectId ? { ...item, callStatus: 3 } : item
+             )
+           );
+           return;
+         }
+       } else {
+         // 這邊是從暫停開始的行為
+         setProjectOutboundData(prev =>
+           prev.map(item =>
+             item.projectId === project.projectId ? { ...item, callStatus: 1 } : item
+           )
+         );
+       }
+ 
+     } catch (error) {
+       console.error('Error in batch outbound:', error);
+       // 更新專案狀態為執行失敗並清空 currentPhone
+       setProjectOutboundData(prev =>
+         prev.map(item =>
+           item.projectId === project.projectId ? { ...item, callStatus: 3 } : item
+         )
+       );
+     }
     }
-  };
+  },[]);
 
   const handlePauseOutbound = (projectId: string) => {
     pauseOutbound(projectId);
@@ -240,61 +319,78 @@ export default function Home() {
                 projectCallState: 'calling',
                 projectCallData,
               }; 
-            } else if (item.currentCallIndex + 1 === item.projectCustomersDesc.length) { // item.currentCallIndex + 1 是因為從 0 開始計算
-                // 將先前的撥打狀態記錄到 projectCustomersDesc 中 
-                const updatedCustomersDesc = [...item.projectCustomersDesc];
-                updatedCustomersDesc[item.currentCallIndex] = {
-                  ...updatedCustomersDesc[item.currentCallIndex],
-                  callStatus: item.projectCallData?.activeCall?.Status === 'Talking' ? 1 : 2, // 更新撥打狀態為初始值
-                };
-
-                // 發送 API 請求到後端，更新撥打狀態...
-                updateCallStatus(
-                  item.projectId,
-                  item.projectCustomersDesc[item.currentCallIndex].customer.id,
-                  updatedCustomersDesc[item.currentCallIndex].callStatus
-                );
-                
-                return {
-                  ...item,
-                  projectCallState: 'finish', // 更新撥打狀態
-                  callStatus: 2, // 更新專案狀態為執行完成
-                  projectCallData,
-                  projectCustomersDesc: updatedCustomersDesc
-                };
             } else {
-                const nextCallIndex = item.currentCallIndex + 1;
-
-                // 撥打下一個電話號碼
-                starOutbound(
-                  item.projectId,
-                  item.projectCustomersDesc[nextCallIndex].customer.phone,
-                  item.appId,
-                  item.appSecret
-                );
-
-                // 將先前的撥打狀態記錄到 projectCustomersDesc 中 
-                const updatedCustomersDesc = [...item.projectCustomersDesc];
-                updatedCustomersDesc[item.currentCallIndex] = {
-                  ...updatedCustomersDesc[item.currentCallIndex],
-                  callStatus: item.projectCallData?.activeCall?.Status === 'Talking' ? 1 : 2, // 更新撥打狀態為初始值
-                };
-
-                // 發送 API 請求到後端，更新撥打狀態...
-                updateCallStatus(
-                  item.projectId,
-                  item.projectCustomersDesc[item.currentCallIndex].customer.id,
-                  updatedCustomersDesc[item.currentCallIndex].callStatus
-                );
-
-                return {
-                  ...item,
-                  projectCallState: 'waiting',
-                  currentCallIndex: nextCallIndex, // 將 currentCallIndex 增加
-                  projectCallData,
-                  projectCustomersDesc: updatedCustomersDesc
+              console.warn('繼續撥打！！！！')
+              handleStarOutbound(item, item.appId, item.appSecret);
+              return {
+                ...item,
+                projectCallState: 'waiting',
+                projectCallData,
               };
-            };
+            }
+
+            // // 更新專案狀態
+            // if (projectCallData) {
+            //   return {
+            //     ...item,
+            //     projectCallState: 'calling',
+            //     projectCallData,
+            //   }; 
+            // } else if (item.currentCallIndex + 1 === item.projectCustomersDesc.length) { // item.currentCallIndex + 1 是因為從 0 開始計算
+            //     // 將先前的撥打狀態記錄到 projectCustomersDesc 中 
+            //     const updatedCustomersDesc = [...item.projectCustomersDesc];
+            //     updatedCustomersDesc[item.currentCallIndex] = {
+            //       ...updatedCustomersDesc[item.currentCallIndex],
+            //       callStatus: item.projectCallData?.activeCall?.Status === 'Talking' ? 1 : 2, // 更新撥打狀態為初始值
+            //     };
+
+            //     // 發送 API 請求到後端，更新撥打狀態...
+            //     updateCallStatus(
+            //       item.projectId,
+            //       item.projectCustomersDesc[item.currentCallIndex].customer.id,
+            //       updatedCustomersDesc[item.currentCallIndex].callStatus
+            //     );
+                
+            //     return {
+            //       ...item,
+            //       projectCallState: 'finish', // 更新撥打狀態
+            //       callStatus: 2, // 更新專案狀態為執行完成
+            //       projectCallData,
+            //       projectCustomersDesc: updatedCustomersDesc
+            //     };
+            // } else {
+            //     const nextCallIndex = item.currentCallIndex + 1;
+
+            //     // 撥打下一個電話號碼
+            //     starOutbound(
+            //       item.projectId,
+            //       item.projectCustomersDesc[nextCallIndex].customer.phone,
+            //       item.appId,
+            //       item.appSecret
+            //     );
+
+            //     // 將先前的撥打狀態記錄到 projectCustomersDesc 中 
+            //     const updatedCustomersDesc = [...item.projectCustomersDesc];
+            //     updatedCustomersDesc[item.currentCallIndex] = {
+            //       ...updatedCustomersDesc[item.currentCallIndex],
+            //       callStatus: item.projectCallData?.activeCall?.Status === 'Talking' ? 1 : 2, // 更新撥打狀態為初始值
+            //     };
+
+            //     // 發送 API 請求到後端，更新撥打狀態...
+            //     updateCallStatus(
+            //       item.projectId,
+            //       item.projectCustomersDesc[item.currentCallIndex].customer.id,
+            //       updatedCustomersDesc[item.currentCallIndex].callStatus
+            //     );
+
+            //     return {
+            //       ...item,
+            //       projectCallState: 'waiting',
+            //       currentCallIndex: nextCallIndex, // 將 currentCallIndex 增加
+            //       projectCallData,
+            //       projectCustomersDesc: updatedCustomersDesc
+            //   };
+            // };
           });
       });
     };
@@ -306,7 +402,7 @@ export default function Home() {
     wsRef.current.onclose = () => {
       console.log('WebSocket connection closed');
     };
-  }, []);
+  }, [handleStarOutbound]);
 
   const [openRows, setOpenRows] = useState<Record<string, boolean>>({}); // 用於跟踪每行的展開狀態
 
@@ -408,7 +504,7 @@ export default function Home() {
                     <Chip
                       label={
                         item.projectCustomersDesc?.length < item.currentCallIndex + 1 ? '沒有門號' :
-                        `門號進度: ${item.currentCallIndex + 1} / ${item.projectCustomersDesc?.length}`
+                        `門號進度: ${item.currentCallIndex + 1} / ${item.projectCustomersDesc?.length} (這個新邏輯也許會棄用)`
                       }
                       variant="outlined"
                       size="small"

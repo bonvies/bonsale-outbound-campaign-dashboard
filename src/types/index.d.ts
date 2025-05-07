@@ -3,6 +3,7 @@ declare global {
   interface ProjectOutboundDataType {
     appId: string
     appSecret: string
+    callFlowId: string
     projectId: string
     projectName: string
     callStatus: number
