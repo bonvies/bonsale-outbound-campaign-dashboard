@@ -15,7 +15,7 @@ This project uses the following environment variables to configure its behavior.
 
 ```env
 # Backend API host address
-VITE_HTTP_HOST=http://localhost:3020
+VITE_HTTP_HOST=http://<bonsale-outbound-campaign DOMAIN>
 
 # WebSocket host address
-VITE_WS_PORT_OUTBOUND_CAMPAIGM_V2=ws://localhost:3022
+VITE_WS_PORT_OUTBOUND_CAMPAIGM_V2=ws://<bonsale-outbound-campaign DOMAIN>
