@@ -8,8 +8,8 @@ This project uses the following environment variables to configure its behavior.
 
 | Variable Name                     | Default Value           | Description                              |
 |-----------------------------------|-------------------------|------------------------------------------|
-| `VITE_HTTP_HOST`                  | `http://localhost:3020` | The HTTP host address for the backend API. |
-| `VITE_WS_PORT_OUTBOUND_CAMPAIGM_V2` | `ws://localhost:3022`   | The WebSocket host address for outbound campaign updates. |
+| `VITE_HTTP_HOST`                  | `http://<bonsale-outbound-campaign DOMAIN>` | The HTTP host address for the backend API. |
+| `VITE_WS_PORT_OUTBOUND_CAMPAIGM_V2` | `ws://<bonsale-outbound-campaign DOMAIN>`   | The WebSocket host address for outbound campaign updates. |
 
 ### Example `.env` File
 
