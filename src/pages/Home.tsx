@@ -229,46 +229,47 @@ export default function Home() {
 
 
  
-       
+      
+
+
+        
+      //  // 這邊是從未執行開始的行為
+      //  // 取得要撥打的電話號碼清單
+      //  const phoneNumbers = project.projectCustomersDesc.map((projectCustomer: ProjectCustomersDesc) => projectCustomer.customer.phone);
  
-       return
-       // 這邊是從未執行開始的行為
-       // 取得要撥打的電話號碼清單
-       const phoneNumbers = project.projectCustomersDesc.map((projectCustomer: ProjectCustomersDesc) => projectCustomer.customer.phone);
+      //  // 找到該專案
+      //  if (project?.callStatus === 0) {
+      //    try {
+      //      const toCall: ToCallResponse = await starOutbound(project.projectId, phoneNumbers[0], appId, appSecret);
  
-       // 找到該專案
-       if (project?.callStatus === 0) {
-         try {
-           const toCall: ToCallResponse = await starOutbound(project.projectId, phoneNumbers[0], appId, appSecret);
- 
-           // 撥打電話的時候 會回傳 一個 callid 我們可以利用這個 callid 來查詢當前的撥打狀態
-           const { callid } = toCall.currentCall?.result ?? {};
+      //      // 撥打電話的時候 會回傳 一個 callid 我們可以利用這個 callid 來查詢當前的撥打狀態
+      //      const { callid } = toCall.currentCall?.result ?? {};
      
-           // 更新專案狀態為執行中
-           setProjectOutboundData(prev =>
-             prev.map(item =>
-               item.projectId === project.projectId ? { ...item, callStatus: 1, currentCallIndex: 0, currentCallId: callid } : item
-             )
-           );
-           return;
-         } catch (error) {
-           console.error('Error fetching project customers:', error);
-           // 更新專案狀態為執行失敗並清空 currentPhone
-           setProjectOutboundData(prev =>
-             prev.map(item =>
-               item.projectId === project.projectId ? { ...item, callStatus: 3 } : item
-             )
-           );
-           return;
-         }
-       } else {
-         // 這邊是從暫停開始的行為
-         setProjectOutboundData(prev =>
-           prev.map(item =>
-             item.projectId === project.projectId ? { ...item, callStatus: 1 } : item
-           )
-         );
-       }
+      //      // 更新專案狀態為執行中
+      //      setProjectOutboundData(prev =>
+      //        prev.map(item =>
+      //          item.projectId === project.projectId ? { ...item, callStatus: 1, currentCallIndex: 0, currentCallId: callid } : item
+      //        )
+      //      );
+      //      return;
+      //    } catch (error) {
+      //      console.error('Error fetching project customers:', error);
+      //      // 更新專案狀態為執行失敗並清空 currentPhone
+      //      setProjectOutboundData(prev =>
+      //        prev.map(item =>
+      //          item.projectId === project.projectId ? { ...item, callStatus: 3 } : item
+      //        )
+      //      );
+      //      return;
+      //    }
+      //  } else {
+      //    // 這邊是從暫停開始的行為
+      //    setProjectOutboundData(prev =>
+      //      prev.map(item =>
+      //        item.projectId === project.projectId ? { ...item, callStatus: 1 } : item
+      //      )
+      //    );
+      //  }
  
      } catch (error) {
        console.error('Error in batch outbound:', error);
