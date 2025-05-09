@@ -325,41 +325,18 @@ export default function Home() {
               }; 
             } else {
               console.log('沒有撥打資料');
-              // 如果沒有撥打資料 代表之前的撥打通話已經結束了 要把先前記錄的 projectCallData 狀態寫回 bonsale 
-              // 並且更新專案狀態為等待撥打
+              // 如果沒有撥打資料 代表之前的撥打通話已經結束了
 
-              // 將先前的撥打狀態記錄到 projectCustomersDesc 中
-              const updatedCustomersDesc = [...item.projectCustomersDesc];
               // 找到之前記錄在專案的撥打資料 
               if (!item.projectCallData) {
-                console.log('%c 找不到之前的撥打資料','color: blue');
+                console.log('%c 找不到之前的撥打資料','color: yellow');
                 // 找不到之前的撥打資料 代表說 有可能進入到 secondOutbound 去播撥打失敗的人
-                // 但是又因為有撥打失敗等待時間 所以 在這邊 我需要 secondOutboundResult
-                // 取得 callStatus: 2 的資料
-                const { projectId, callFlowId } = item;
-                const secondOutboundQueryString = new URLSearchParams({
-                  callFlowIdOutbound: callFlowId,
-                  projectIdOutbound: projectId,
-                  limit: '1',
-                  callStatus: '2',
-                });
-                axios.get(`${HTTP_HOST}/bonsale/outbound?${secondOutboundQueryString}`)
-                  .then((secondOutboundResult) => {
-                    const secondOutboundData = secondOutboundResult.data.list
-                    console.log(`%c secondOutboundData:${secondOutboundData}`,'color: blue')
-          
-                    if (secondOutboundData.length > 0) {
-                      // 如果有資料 就撥打電話
-                      handleStarOutbound(item, item.appId, item.appSecret);
-                    }
-                  })
-                  .catch((error) => {
-                    console.error('Error fetching second outbound data:', error);
-                  });
-                // 如果沒有資料 就不做任何事
+                handleStarOutbound(item, item.appId, item.appSecret);
                 return item;
               }
 
+              // 將先前的撥打狀態記錄到 projectCustomersDesc 中
+              const updatedCustomersDesc = [...item.projectCustomersDesc];
               const prevCustomersDesc = updatedCustomersDesc.find(customersDesc => {
                 return item.projectCallData && customersDesc.customerId === item.projectCallData.customerId;
               }) 
@@ -404,9 +381,8 @@ export default function Home() {
               // 等待所有的 API 請求完成
               Promise.all(updatePromises)
                 .then(() => {
-                  // 當所有的 API 請求完成後，再次撥打電話
-                  console.log('所有的 API 請求完成, 再次撥打電話');
-                  handleStarOutbound(item, item.appId, item.appSecret); 
+                  // 所有的 通話記錄 API 請求完成
+                  console.log('%c 所有的 通話記錄 API 請求完成','color: green');
                 })
                 .catch(error => {
                   console.error('Error in updating records:', error);
