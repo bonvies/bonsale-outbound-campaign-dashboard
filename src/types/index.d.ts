@@ -3,18 +3,17 @@ declare global {
   interface ProjectOutboundDataType {
     appId: string
     appSecret: string
+    callFlowId: string
     projectId: string
     projectName: string
     callStatus: number
     extension: string
-    // projectCustomers: []
     projectCustomersDesc: ProjectCustomersDesc[]
-    // phoneNumbers: string[]; 
-    currentCallIndex: number // 當前撥打的電話號碼索引
     projectCallState: string // 撥打狀態
     projectCallData: { // 撥打資料
       requestId: string;
       phone: string;
+      customerId: string;
       projectId: string;
       activeCall?: {
         Id: number;
