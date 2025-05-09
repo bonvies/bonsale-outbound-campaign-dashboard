@@ -331,7 +331,34 @@ export default function Home() {
               // 將先前的撥打狀態記錄到 projectCustomersDesc 中
               const updatedCustomersDesc = [...item.projectCustomersDesc];
               // 找到之前記錄在專案的撥打資料 
-              if (!item.projectCallData) return item;
+              if (!item.projectCallData) {
+                console.log('%c 找不到之前的撥打資料','color: blue');
+                // 找不到之前的撥打資料 代表說 有可能進入到 secondOutbound 去播撥打失敗的人
+                // 但是又因為有撥打失敗等待時間 所以 在這邊 我需要 secondOutboundResult
+                // 取得 callStatus: 2 的資料
+                const { projectId, callFlowId } = item;
+                const secondOutboundQueryString = new URLSearchParams({
+                  callFlowIdOutbound: callFlowId,
+                  projectIdOutbound: projectId,
+                  limit: '1',
+                  callStatus: '2',
+                });
+                axios.get(`${HTTP_HOST}/bonsale/outbound?${secondOutboundQueryString}`)
+                  .then((secondOutboundResult) => {
+                    const secondOutboundData = secondOutboundResult.data.list
+                    console.log(`%c secondOutboundData:${secondOutboundData}`,'color: blue')
+          
+                    if (secondOutboundData.length > 0) {
+                      // 如果有資料 就撥打電話
+                      handleStarOutbound(item, item.appId, item.appSecret);
+                    }
+                  })
+                  .catch((error) => {
+                    console.error('Error fetching second outbound data:', error);
+                  });
+                // 如果沒有資料 就不做任何事
+                return item;
+              }
 
               const prevCustomersDesc = updatedCustomersDesc.find(customersDesc => {
                 return item.projectCallData && customersDesc.customerId === item.projectCallData.customerId;
