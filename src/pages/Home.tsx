@@ -92,7 +92,7 @@ export default function Home() {
       const updatedData = await Promise.all(
         dataList.map(async (item: Project) => {
           // 將專案中的客戶電話號碼提取出來
-          const customers = await axios.get(`${HTTP_HOST}/bonsale/project?projectIds=${item.projectId}`);
+          const customers = await axios.get(`${HTTP_HOST}/bonsale/project?projectIds=${item.projectId}&limit=-1`);
           const projectCustomersDesc = customers.data.list.map((customer: Project) => customer);
 
           return {
