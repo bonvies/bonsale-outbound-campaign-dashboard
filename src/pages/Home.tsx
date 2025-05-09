@@ -3,8 +3,9 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableRow, IconButton, Chip, Stack, Collapse, Typography, Box } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
-import InfoOutlineIcon from '@mui/icons-material/InfoOutline';
-import { useNavigate } from 'react-router-dom'
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+// import InfoOutlineIcon from '@mui/icons-material/InfoOutline';
+// import { useNavigate } from 'react-router-dom'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
@@ -52,7 +53,7 @@ function CustomerDetailsTable({ projectCustomersDesc }: { projectCustomersDesc: 
 };
 
 export default function Home() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const wsRef = useRef<WebSocket | null>(null); // 使用 useRef 管理 WebSocket 實例
 
   const [projectOutboundData, setProjectOutboundData] = useState<ProjectOutboundDataType[]>([]);
@@ -195,7 +196,7 @@ export default function Home() {
 
   const handleStarOutbound = useCallback(async (project: ProjectOutboundDataType, appId: string, appSecret: string) => {
     // 如果是暫停的話 改變狀態就好 
-    if (project?.callStatus === 4) {
+    if (project?.callStatus === 4 || project?.callStatus === 3) {
       // 更新專案狀態為執行中
       setProjectOutboundData(prev =>
         prev.map(item =>
@@ -306,6 +307,11 @@ export default function Home() {
       setProjectOutboundData(prevProjectOutboundData => {
         return prevProjectOutboundData
           .map((item) => {
+            if (item.callStatus === 3) {
+              // 如果專案狀態是執行失敗 再讓他重回執行狀態 重新再試試看
+              return {...item, callStatus: 1};
+            }
+
             if (item.callStatus !== 1) return item; // 如果專案狀態不是執行中，則不處理
 
             // 尋找當前專案的撥打資料
@@ -498,17 +504,24 @@ export default function Home() {
                       >
                         <PlayArrowIcon />
                       </IconButton> : 
-                      <IconButton 
-                        onClick={() => handlePauseOutbound(item.projectId) }
-                        disabled={item.projectCallState !== 'calling' || !item.projectCallData?.activeCall}
-                        sx={{display: item.callStatus === 2 ? 'none' : 'block'}}
-                      >
-                        <PauseIcon /> 
-                      </IconButton> 
+                      item.callStatus === 3 ? 
+                        <IconButton 
+                          onClick={() => handleStarOutbound(item, item.appId, item.appSecret)}
+                        >
+                          <RestartAltIcon />
+                        </IconButton> : 
+                        <IconButton 
+                          onClick={() => handlePauseOutbound(item.projectId) }
+                          disabled={item.projectCallState !== 'calling' || !item.projectCallData?.activeCall}
+                          sx={{display: item.callStatus === 2 ? 'none' : 'block'}}
+                        >
+                          <PauseIcon /> 
+                        </IconButton> 
                     }
-                    <IconButton onClick={() => navigate(`/project/${item.projectId}`)}>
+
+                    {/* <IconButton onClick={() => navigate(`/project/${item.projectId}`)}>
                       <InfoOutlineIcon />
-                    </IconButton>
+                    </IconButton> */}
                   </Stack>
                 </TableCell>
                 <TableCell align='left'>
