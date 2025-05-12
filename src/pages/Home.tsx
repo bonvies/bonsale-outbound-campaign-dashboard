@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableRow, IconButton, Chip, Stack, Collapse, Typography, Box } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -9,7 +8,13 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
-const HTTP_HOST = import.meta.env.VITE_HTTP_HOST || 'http://localhost:3020';
+import useProjectOutboundData from '../hooks/useProjectOutboundData';
+import useUpdateCallStatus from '../hooks/useUpdateCallStatus';
+import useUpdateDialUpdate from '../hooks/useUpdateDialUpdate';
+import useUpdateVisitRecord from '../hooks/useUpdateVisitRecord';
+import useActiveOutbound from '../hooks/useActiveOutbound';
+import useFetchOutboundData from '../hooks/useFetchOutboundData';
+
 const WS_HOST = import.meta.env.VITE_WS_PORT_OUTBOUND_CAMPAIGM_V2 ||  'ws://localhost:3022';
 
 function CustomerDetailsTable({ projectCustomersDesc }: { projectCustomersDesc: ProjectCustomersDesc[] }) {
@@ -53,10 +58,17 @@ function CustomerDetailsTable({ projectCustomersDesc }: { projectCustomersDesc: 
 };
 
 export default function Home() {
+  // 引入 自定義 API Hook
+  const { updateCallStatus } = useUpdateCallStatus();
+  const { updateDialUpdate } = useUpdateDialUpdate();
+  const { updateVisitRecord } = useUpdateVisitRecord();
+  const { activeOutbound } = useActiveOutbound();
+  const { fetchOutboundData } = useFetchOutboundData();
+
   // const navigate = useNavigate();
   const wsRef = useRef<WebSocket | null>(null); // 使用 useRef 管理 WebSocket 實例
 
-  const [projectOutboundData, setProjectOutboundData] = useState<ProjectOutboundDataType[]>([]);
+  const { projectOutboundData, setProjectOutboundData } = useProjectOutboundData(); 
 
   const callStatusInfo = (callStatus: number): { state: string; color: 'default' | 'warning' | 'success' | 'error' } => {
     switch (callStatus) {
@@ -78,109 +90,6 @@ export default function Home() {
   const currentCallShow = ( projectCustomers: ProjectCustomersDesc[], customerId: string) => {
     return (projectCustomers.find(item => item.customerId === customerId))?.customer?.memberName ?? '-';
   }
-
-  const getProjectOutboundData = useCallback(async () => {
-    try {
-      const queryString = new URLSearchParams({
-        isEnable: '1',
-        limit: '-1',
-      });
-      const response = await axios.get(`${HTTP_HOST}/bonsale/auto-dial?${queryString}`);
-      const dataList = response.data.list;
-      // console.log('Project Auto Dial Data:', dataList);
-
-      // 將資料轉換為符合專案撥打狀態的格式
-      const updatedData = await Promise.all(
-        dataList.map(async (item: Project) => {
-          // 將專案中的客戶電話號碼提取出來
-          const customers = await axios.get(`${HTTP_HOST}/bonsale/project?projectIds=${item.projectId}&limit=-1`);
-          const projectCustomersDesc = customers.data.list.map((customer: Project) => customer);
-
-          return {
-            appId: item.appId,
-            appSecret: item.appSecret,
-            callFlowId: item.callFlowId,
-            projectId: item.projectId,
-            projectName: item.projectInfo.projectName,
-            callStatus: 0,
-            extension: item.callFlow.phone,
-            projectCustomersDesc,
-            currentCallIndex: 0, 
-            projectCallState: 'init', // 撥打狀態
-            projectCallData: null // 撥打資料,
-          };
-        })
-      );
-      setProjectOutboundData(updatedData);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching project auto-dial data:', error);
-      throw error;
-    }
-  },[]);
-
-  const updateCallStatus = async (projectId: string, customerId: string, callStatus: number) => {
-    try {
-      const response = await axios.put(`${HTTP_HOST}/bonsale/project/${projectId}/customer/${customerId}/callStatus`, { callStatus });
-      return response.data;
-    } catch (error) {
-      console.error('Error updating call status:', error);
-      throw error;
-    }
-  };
-
-  const updateDialUpdate = async (projectId: string, customerId: string) => {
-    try {
-      const response = await axios.put(`${HTTP_HOST}/bonsale/project/${projectId}/customer/${customerId}/dialUpdate`, {});
-      return response.data;
-    } catch (error) {
-      console.error('Error updating dial update:', error);
-      throw error;
-    }
-  };
-
-  const updateVisitRecord = async (
-    projectId: string,
-    customerId: string,
-    visitType: 'intro' | 'quotation'| 'negotiation' | 'contract' | 'close',
-    visitedUsername: string,
-    visitedAt: string, 
-    description: string,
-    visitedResult: string,
-    task?: {
-      topic: string;
-      description: string;
-      remindAt: string;
-    }
-  ) => {
-    try {
-      const response = await axios.put(`${HTTP_HOST}/bonsale/project/customer/visit`, {
-        projectId, customerId, visitType, visitedUsername, visitedAt, description, visitedResult, task
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error updating interview record:', error);
-      throw error;
-    }
-  };
-
-  const starOutbound = async (projectId: string, customerId: string, phone: string, appId: string, appSecret: string): Promise<ToCallResponse> => {
-    try {
-      // 撥打電話
-      const result = await axios.post(`${HTTP_HOST}/projectOutbound`, {
-        grant_type: "client_credentials",
-        client_id: appId,
-        client_secret: appSecret,
-        phone: phone,
-        projectId,
-        customerId
-      })
-      return result.data as ToCallResponse;
-    } catch (error) {
-      console.error('Error starting outbound:', error);
-      throw error;
-    };
-  };
 
   const pauseOutbound = (projectId: string) => {
     const project = projectOutboundData.find(item => item.projectId === projectId);
@@ -210,18 +119,14 @@ export default function Home() {
       try {
         // 取得要撥打的資料
         const { projectId, callFlowId } = project;
-        console.log('projectId:', projectId);
-        console.log('callFlowId:', callFlowId);
- 
-        // 先取得 callStatus: 0 的資料
-        const firstOutboundQueryString = new URLSearchParams({
+
+        // 使用 fetchOutboundData 取得 callStatus: 0 的資料
+        const firstOutboundData = await fetchOutboundData({
           callFlowIdOutbound: callFlowId,
           projectIdOutbound: projectId,
           limit: '1',
           callStatus: '0',
         });
-        const firstOutboundResult = await axios.get(`${HTTP_HOST}/bonsale/outbound?${firstOutboundQueryString}`);
-        const firstOutboundData = firstOutboundResult.data.list ?? [];
  
         console.log(`%c firstOutboundData:${firstOutboundData}`,'color: red')
 
@@ -232,7 +137,7 @@ export default function Home() {
           console.log('phone:', phone);
           console.log('projectId:', projectId);
           console.log('customerId:', customerId);
-          const toCall: ToCallResponse = await starOutbound(projectId, customerId, phone, appId, appSecret);
+          const toCall: ToCallResponse = await activeOutbound(projectId, customerId, phone, appId, appSecret);
   
           // 撥打電話的時候 會回傳 一個 callid 我們可以利用這個 callid 來查詢當前的撥打狀態
           const { callid } = toCall.currentCall?.result ?? {};
@@ -246,21 +151,20 @@ export default function Home() {
   
         } else {
           // 如果沒有資料 就取得 callStatus: 2 的資料
-          const secondOutboundQueryString = new URLSearchParams({
+          const secondOutboundData = await fetchOutboundData({
             callFlowIdOutbound: callFlowId,
             projectIdOutbound: projectId,
             limit: '1',
             callStatus: '2',
           });
-          const secondOutboundResult = await axios.get(`${HTTP_HOST}/bonsale/outbound?${secondOutboundQueryString}`);
-          const secondOutboundData = secondOutboundResult.data.list
+
           console.log(`%c secondOutboundData:${secondOutboundData}`,'color: blue')
 
           if (secondOutboundData.length > 0) {
             // 如果有資料 就撥打電話
             const { phone } = secondOutboundData[0].customer; 
             const { projectId, customerId } = secondOutboundData[0]; 
-            const toCall: ToCallResponse = await starOutbound(projectId, customerId, phone, appId, appSecret);
+            const toCall: ToCallResponse = await activeOutbound(projectId, customerId, phone, appId, appSecret);
     
             // 撥打電話的時候 會回傳 一個 callid 我們可以利用這個 callid 來查詢當前的撥打狀態
             const { callid } = toCall.currentCall?.result ?? {};
@@ -283,7 +187,7 @@ export default function Home() {
        );
      }
     }
-  },[]);
+  },[activeOutbound, fetchOutboundData, setProjectOutboundData]);
 
   const handlePauseOutbound = (projectId: string) => {
     pauseOutbound(projectId);
@@ -420,7 +324,7 @@ export default function Home() {
     wsRef.current.onclose = () => {
       console.log('WebSocket connection closed');
     };
-  }, [handleStarOutbound]);
+  }, [handleStarOutbound, setProjectOutboundData, updateCallStatus, updateDialUpdate, updateVisitRecord]);
 
   const [openRows, setOpenRows] = useState<Record<string, boolean>>({}); // 用於跟踪每行的展開狀態
 
@@ -430,15 +334,6 @@ export default function Home() {
       [projectId]: !prev[projectId],
     }));
   };
-
-  // 打印出來看資料格式
-  // useEffect(() => {
-  //   console.log('projectOutboundData:', projectOutboundData);
-  // }, [projectOutboundData]);
-
-  useEffect(() => {
-    getProjectOutboundData();
-  }, [getProjectOutboundData]);
 
   useEffect(() => {
     wsRef.current = new WebSocket(WS_HOST); // 初始化 WebSocket
