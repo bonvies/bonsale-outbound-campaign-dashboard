@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const HTTP_HOST = import.meta.env.VITE_HTTP_HOST || 'http://localhost:3020';
+const HTTP_HOST = import.meta.env.VITE_HTTP_HOST;
 
 const useProjectOutboundData = () => {
   const [projectOutboundData, setProjectOutboundData] = useState<ProjectOutboundDataType[]>([]);

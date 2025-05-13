@@ -17,7 +17,7 @@ import useFetchOutboundData from '../hooks/api/useFetchOutboundData';
 
 import useThrottle from '../hooks/useThrottle';
 
-const WS_HOST = import.meta.env.VITE_WS_PORT_OUTBOUND_CAMPAIGM_V2 ||  'ws://localhost:3022';
+const WS_HOST = import.meta.env.VITE_WS_PORT_OUTBOUND_CAMPAIGM_V2;
 console.log('WS_HOST:', WS_HOST);
 
 function CustomerDetailsTable({ projectCustomersDesc }: { projectCustomersDesc: ProjectCustomersDesc[] }) {

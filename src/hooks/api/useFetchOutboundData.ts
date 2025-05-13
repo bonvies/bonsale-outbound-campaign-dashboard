@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const HTTP_HOST = import.meta.env.VITE_HTTP_HOST || 'http://localhost:3020';
+const HTTP_HOST = import.meta.env.VITE_HTTP_HOST;
 
 export default function useFetchOutboundData() {
   const fetchOutboundData = async (params: Record<string, string>) => {
