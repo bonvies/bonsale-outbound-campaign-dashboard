@@ -8,14 +8,17 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
-import useProjectOutboundData from '../hooks/useProjectOutboundData';
-import useUpdateCallStatus from '../hooks/useUpdateCallStatus';
-import useUpdateDialUpdate from '../hooks/useUpdateDialUpdate';
-import useUpdateVisitRecord from '../hooks/useUpdateVisitRecord';
-import useActiveOutbound from '../hooks/useActiveOutbound';
-import useFetchOutboundData from '../hooks/useFetchOutboundData';
+import useProjectOutboundData from '../hooks/api/useProjectOutboundData';
+import useUpdateCallStatus from '../hooks/api/useUpdateCallStatus';
+import useUpdateDialUpdate from '../hooks/api/useUpdateDialUpdate';
+import useUpdateVisitRecord from '../hooks/api/useUpdateVisitRecord';
+import useActiveOutbound from '../hooks/api/useActiveOutbound';
+import useFetchOutboundData from '../hooks/api/useFetchOutboundData';
+
+import useThrottle from '../hooks/useThrottle';
 
 const WS_HOST = import.meta.env.VITE_WS_PORT_OUTBOUND_CAMPAIGM_V2 ||  'ws://localhost:3022';
+console.log('WS_HOST:', WS_HOST);
 
 function CustomerDetailsTable({ projectCustomersDesc }: { projectCustomersDesc: ProjectCustomersDesc[] }) {
   return (
@@ -103,7 +106,7 @@ export default function Home() {
     }
   };
 
-  const handleStarOutbound = useCallback(async (project: ProjectOutboundDataType, appId: string, appSecret: string) => {
+  const autoOutbound = useCallback(async (project: ProjectOutboundDataType, appId: string, appSecret: string) => {
     // 如果是暫停的話 改變狀態就好 
     if (project?.callStatus === 4 || project?.callStatus === 3) {
       // 更新專案狀態為執行中
@@ -189,6 +192,8 @@ export default function Home() {
     }
   },[activeOutbound, fetchOutboundData, setProjectOutboundData]);
 
+  const handleStarOutbound = useThrottle(autoOutbound, 500); // 使用 throttle 限制每 500 豪秒最多執行一次
+
   const handlePauseOutbound = (projectId: string) => {
     pauseOutbound(projectId);
   }
@@ -241,7 +246,15 @@ export default function Home() {
               if (!item.projectCallData) {
                 console.log('%c 找不到之前的撥打資料','color: yellow');
                 // 找不到之前的撥打資料 代表說 有可能進入到 secondOutbound 去播撥打失敗的人
-                handleStarOutbound(item, item.appId, item.appSecret);
+
+                // 因為 handleStarOutbound 有節流器的關係 所以會導致只有最前面的幾個專案先撥打
+                // 其他的專案會因節流器的關係 一直沒有撥打到
+                // 所以這邊要加一個隨機延遲的時間 讓他們有機會平均分散撥打
+                const randomDelayTime = Math.round(Math.random() * 200); // 隨機延遲時間 0~200 毫秒
+                setTimeout(() => {
+                  handleStarOutbound(item, item.appId, item.appSecret);
+                }, randomDelayTime);
+                
                 return item;
               }
 
