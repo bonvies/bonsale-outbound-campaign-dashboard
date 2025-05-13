@@ -3,8 +3,8 @@ import LocalPhoneIcon from '@mui/icons-material/LocalPhone';
 import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 
-const HTTP_HOST = import.meta.env.VITE_HTTP_HOST || 'http://localhost:3020';
-const WS_HOST = import.meta.env.VITE_WS_PORT_OUTBOUND_CAMPAIGM ||  'ws://localhost:3021';
+const HTTP_HOST = import.meta.env.VITE_HTTP_HOST;
+const WS_HOST = import.meta.env.VITE_WS_PORT_OUTBOUND_CAMPAIGM;
 
 function DemoTest() {
   const [clientId, setClientId] = useState('');
