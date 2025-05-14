@@ -93,6 +93,20 @@ export default function Home() {
     return (projectCustomers.find(item => item.customerId === customerId))?.customer?.memberName ?? '-';
   }
 
+  // 開始撥打電話
+  const startOutbound = (projectId: string) => {
+    const project = projectOutboundData.find(item => item.projectId === projectId);
+    if (project) {
+      // 更新專案狀態為暫停
+      setProjectOutboundData(prev =>
+        prev.map(item =>
+          item.projectId === projectId ? { ...item, callStatus: 1 } : item
+        )
+      );
+    }
+  };
+
+  // 暫停撥打電話
   const pauseOutbound = (projectId: string) => {
     const project = projectOutboundData.find(item => item.projectId === projectId);
     if (project) {
@@ -144,7 +158,7 @@ export default function Home() {
           // 撥打電話的時候 會回傳 一個 callid 我們可以利用這個 callid 來查詢當前的撥打狀態
           const { callid } = toCall.currentCall?.result ?? {};
     
-          // 更新專案狀態為執行中
+          // 更新專案狀態為執行中 且更新 currentCallId
           setProjectOutboundData(prev =>
             prev.map(item =>
               item.projectId === project.projectId ? { ...item, callStatus: 1, currentCallIndex: 0, currentCallId: callid } : item
@@ -171,7 +185,7 @@ export default function Home() {
             // 撥打電話的時候 會回傳 一個 callid 我們可以利用這個 callid 來查詢當前的撥打狀態
             const { callid } = toCall.currentCall?.result ?? {};
       
-            // 更新專案狀態為執行中
+            // 更新專案狀態為執行中 且更新 currentCallId
             setProjectOutboundData(prev =>
               prev.map(item =>
                 item.projectId === project.projectId ? { ...item, callStatus: 1, currentCallId: callid } : item
@@ -191,7 +205,11 @@ export default function Home() {
     }
   },[activeOutbound, fetchOutboundData, setProjectOutboundData]);
 
-  const handleStarOutbound = useThrottle(autoOutbound, 500); // 使用 throttle 限制每 500 豪秒最多執行一次
+  const throttleAutoOutbound = useThrottle(autoOutbound, 500); // 使用 throttle 限制每 500 豪秒最多執行一次
+
+  const handleStartOutbound = (projectId: string) => {
+    startOutbound(projectId);
+  };
 
   const handlePauseOutbound = (projectId: string) => {
     pauseOutbound(projectId);
@@ -237,26 +255,7 @@ export default function Home() {
                 projectCallState: 'calling',
                 projectCallData,
               }; 
-            } else {
-              console.log('沒有撥打資料');
-              // 如果沒有撥打資料 代表之前的撥打通話已經結束了
-
-              // 找到之前記錄在專案的撥打資料 
-              if (!item.projectCallData) {
-                console.log('%c 找不到之前的撥打資料','color: yellow');
-                // 找不到之前的撥打資料 代表說 有可能進入到 secondOutbound 去播撥打失敗的人
-
-                // 因為 handleStarOutbound 有節流器的關係 所以會導致只有最前面的幾個專案先撥打
-                // 其他的專案會因節流器的關係 一直沒有撥打到
-                // 所以這邊要加一個隨機延遲的時間 讓他們有機會平均分散撥打
-                const randomDelayTime = Math.round(Math.random() * 200); // 隨機延遲時間 0~200 毫秒
-                setTimeout(() => {
-                  handleStarOutbound(item, item.appId, item.appSecret);
-                }, randomDelayTime);
-                
-                return item;
-              }
-
+            } else if (item.projectCallData) { // 找到之前記錄在專案的撥打資料 
               // 將先前的撥打狀態記錄到 projectCustomersDesc 中
               const updatedCustomersDesc = [...item.projectCustomersDesc];
               const prevCustomersDesc = updatedCustomersDesc.find(customersDesc => {
@@ -320,9 +319,25 @@ export default function Home() {
               };
               return {
                 ...item,
-                projectCallState: 'waiting',
+                projectCallState: 'recorded',
                 projectCallData,
                 projectCustomersDesc: updatedCustomersDesc,
+              };
+            } else {
+              console.log('%c 找不到之前的撥打資料','color: yellow');
+              // 找不到之前的撥打資料 代表說 有可能進入到 secondOutbound 去播撥打失敗的人
+
+              // 因為 throttleAutoOutbound 有節流器的關係 所以會導致只有最前面的幾個專案先撥打
+              // 其他的專案會因節流器的關係 一直沒有撥打到
+              // 所以這邊要加一個隨機延遲的時間 讓他們有機會平均分散撥打
+              const randomDelayTime = Math.round(Math.random() * 200); // 隨機延遲時間 0~200 毫秒
+              setTimeout(() => {
+                throttleAutoOutbound(item, item.appId, item.appSecret);
+              }, randomDelayTime);
+              
+              return {
+                ...item,
+                projectCallState: 'waiting',
               };
             }
           });
@@ -336,7 +351,7 @@ export default function Home() {
     wsRef.current.onclose = () => {
       console.log('WebSocket connection closed');
     };
-  }, [handleStarOutbound, setProjectOutboundData, updateCallStatus, updateDialUpdate, updateVisitRecord]);
+  }, [throttleAutoOutbound, setProjectOutboundData, updateCallStatus, updateDialUpdate, updateVisitRecord]);
 
   const [openRows, setOpenRows] = useState<Record<string, boolean>>({}); // 用於跟踪每行的展開狀態
 
@@ -388,7 +403,13 @@ export default function Home() {
 
           return (
             <Fragment key={item.projectId}>
-              <TableRow key={item.projectId}>
+              <TableRow 
+                key={item.projectId}
+                sx={{
+                  backgroundColor: item.callStatus === 4 ? '#f5f5f5' : 'inherit',
+                  transition: 'background-color 0.3s'
+                }}
+              >
                 <TableCell align="center">
                   <IconButton onClick={() => toggleRow(item.projectId)}>
                     {isOpen ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
@@ -407,19 +428,19 @@ export default function Home() {
                   <Stack direction='row'>
                     {item.callStatus === 0 || item.callStatus === 4 ? 
                       <IconButton 
-                        onClick={() => handleStarOutbound(item, item.appId, item.appSecret)}
+                        onClick={() => handleStartOutbound(item.projectId)}
                       >
                         <PlayArrowIcon />
                       </IconButton> : 
                       item.callStatus === 3 ? 
                         <IconButton 
-                          onClick={() => handleStarOutbound(item, item.appId, item.appSecret)}
+                          onClick={() => handleStartOutbound(item.projectId)}
                         >
                           <RestartAltIcon />
                         </IconButton> : 
                         <IconButton 
                           onClick={() => handlePauseOutbound(item.projectId) }
-                          disabled={item.projectCallState !== 'calling' || !item.projectCallData?.activeCall}
+                          disabled={item.projectCallState === 'calling' || item.projectCallState === 'waiting' }
                           sx={{display: item.callStatus === 2 ? 'none' : 'block'}}
                         >
                           <PauseIcon /> 
@@ -437,11 +458,18 @@ export default function Home() {
                       label={`狀態: ${
                         item.projectCallState === 'init' ? '準備撥打' : 
                         item.projectCallState === 'waiting' ? '等待撥打' : 
+                        item.projectCallState === 'recorded' ? '撥打已記錄' :
                         item.projectCallState === 'calling' ? '撥打中' : 
                         item.projectCallState === 'finish' ? '撥打完成' : 
                         item.projectCallState
                       }`}
-                      color={item.projectCallState === 'calling' ? 'primary' : 'default'}
+                      color={
+                        item.projectCallState === 'calling' ? 'primary' : 
+                        item.projectCallState === 'waiting' ? 'warning' :
+                        item.projectCallState === 'recorded' ? 'success' :
+                        item.projectCallState === 'finish' ? 'success' :
+                        'default'
+                      }
                       size="small"
                       sx={{ marginBottom: '4px' }}
                       />
