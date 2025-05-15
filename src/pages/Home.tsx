@@ -370,7 +370,18 @@ export default function Home() {
       wsRef.current?.close(); // 清理 WebSocket 連線
     };
   }, [connectWebSocket]);
-  
+
+  useEffect(() => {
+    const unloadCallback = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = ""; // Chrome requires this to show the confirmation dialog
+      return ""; // For other browsers
+    };
+
+    window.addEventListener("beforeunload", unloadCallback);
+    return () => window.removeEventListener("beforeunload", unloadCallback);
+  }, []);
+    
   return (
     <Table>
       <TableHead>
