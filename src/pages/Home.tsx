@@ -371,6 +371,7 @@ export default function Home() {
     };
   }, [connectWebSocket]);
 
+  // 為了避免用戶重新整理導致撥號中斷而設置的警告
   useEffect(() => {
     const unloadCallback = (event: BeforeUnloadEvent) => {
       event.preventDefault();

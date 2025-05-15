@@ -12,6 +12,7 @@ const useProjectOutboundData = () => {
       const queryString = new URLSearchParams({
         isEnable: '1',
         limit: '-1',
+        sort: 'created_at+desc'
       });
       const response = await axios.get(`${HTTP_HOST}/bonsale/auto-dial?${queryString}`);
       const dataList = response.data.list;
@@ -21,9 +22,12 @@ const useProjectOutboundData = () => {
       const updatedData = await Promise.all(
         dataList.map(async (item: Project) => {
           // 將專案中的客戶電話號碼提取出來
-          const customers = await axios.get(`${HTTP_HOST}/bonsale/project?projectIds=${item.projectId}&limit=-1`);
+          const queryString = new URLSearchParams({
+            limit: '-1',
+            projectIds: item.projectId
+          });
+          const customers = await axios.get(`${HTTP_HOST}/bonsale/project?${queryString}`);
           const projectCustomersDesc = customers.data.list.map((customer: Project) => customer);
-
           return {
             appId: item.appId,
             appSecret: item.appSecret,
@@ -35,7 +39,7 @@ const useProjectOutboundData = () => {
             projectCustomersDesc,
             currentCallIndex: 0, 
             projectCallState: 'init', // 撥打狀態
-            projectCallData: null // 撥打資料,
+            projectCallData: null, // 撥打資料,
           };
         })
       );
