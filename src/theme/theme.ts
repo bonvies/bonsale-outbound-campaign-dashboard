@@ -1,4 +1,3 @@
-import { colors } from '@mui/material';
 import '@mui/material/styles';
 declare module '@mui/material/styles' {
   interface PaletteColor {
