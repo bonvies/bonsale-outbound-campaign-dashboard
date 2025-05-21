@@ -33,7 +33,7 @@ import useUpdateProject from '../hooks/api/useUpdateProject';
 import useThrottle from '../hooks/useThrottle';
 import axios from 'axios';
 
-const WS_HOST = import.meta.env.VITE_WS_PORT_OUTBOUND_CAMPAIGM_V2;
+const WS_HOST = import.meta.env.VITE_WS_PORT_PROJECT_OUTBOUND;
 const HTTP_HOST = import.meta.env.VITE_HTTP_HOST;
 
 function CustomerDetailsTable({ projectCustomersDesc }: { projectCustomersDesc: ProjectCustomersDesc[] }) {
