@@ -10,7 +10,9 @@ import {
   Stack,
   Collapse,
   Typography,
-  Box
+  Box,
+  Switch,
+  Button
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -26,10 +28,13 @@ import useUpdateDialUpdate from '../hooks/api/useUpdateDialUpdate';
 import useUpdateVisitRecord from '../hooks/api/useUpdateVisitRecord';
 import useActiveOutbound from '../hooks/api/useActiveOutbound';
 import useFetchOutboundData from '../hooks/api/useFetchOutboundData';
+import useUpdateProject from '../hooks/api/useUpdateProject';
 
 import useThrottle from '../hooks/useThrottle';
+import axios from 'axios';
 
 const WS_HOST = import.meta.env.VITE_WS_PORT_OUTBOUND_CAMPAIGM_V2;
+const HTTP_HOST = import.meta.env.VITE_HTTP_HOST;
 
 function CustomerDetailsTable({ projectCustomersDesc }: { projectCustomersDesc: ProjectCustomersDesc[] }) {
   return (
@@ -78,6 +83,7 @@ export default function Home() {
   const { updateVisitRecord } = useUpdateVisitRecord();
   const { activeOutbound } = useActiveOutbound();
   const { fetchOutboundData } = useFetchOutboundData();
+  const { updateProject } = useUpdateProject();
 
   // const navigate = useNavigate();
   const wsRef = useRef<WebSocket | null>(null); // 使用 useRef 管理 WebSocket 實例
@@ -208,6 +214,48 @@ export default function Home() {
 
   const handlePauseOutbound = (projectId: string) => {
     pauseOutbound(projectId);
+  };
+
+  const handleAllProjectStartOutbound = async () => {
+    setProjectOutboundData(prev =>
+      prev.map(item =>
+        item.isEnable ? { ...item, callStatus: 1 } : item
+      )
+    );
+  }
+
+  const handleToggleProject = async (project: ProjectOutboundDataType) => {
+    const { projectId, isEnable } = project;
+    await updateProject(projectId, JSON.stringify(!isEnable))
+    setProjectOutboundData(prev => 
+      prev.map(item => {
+        if (item.projectId === projectId) {
+          // 將專案中的客戶電話號碼提取出來
+          const queryString = new URLSearchParams({
+            limit: '-1',
+            projectIds: item.projectId
+          });
+          // 使用 async/await 處理 axios 請求
+          (async () => {
+            try {
+              const customers = await axios.get(`${HTTP_HOST}/bonsale/project?${queryString}`);
+              const projectCustomersDesc = customers.data.list.map((customer: Project) => customer);
+              setProjectOutboundData(prevInner =>
+                prevInner.map(innerItem =>
+                  innerItem.projectId === projectId
+                    ? { ...innerItem, isEnable: !isEnable, projectCustomersDesc }
+                    : innerItem
+                )
+              );
+            } catch (error) {
+              console.error('Error fetching project customers:', error);
+            }
+          })();
+          return { ...item, isEnable: !isEnable }; // 先切換 isEnable，projectCustomersDesc 由上面 async 處理
+        }
+        return item;
+      })
+    );
   }
 
   const connectWebSocket = useCallback(() => {
@@ -380,10 +428,23 @@ export default function Home() {
     
   return (
     <Box sx={{ height: '100%', maxHeight:'100%', overflowY: 'scroll' }}>
+      <Button 
+        variant="contained" 
+        onClick={handleAllProjectStartOutbound}
+        sx={{
+          margin: '12px 0',
+          bgcolor: (theme) => theme.palette.secondary.main, 
+        }}
+      >
+        全部執行
+      </Button> 
       <Table stickyHeader>
         <TableHead>
           <TableRow>
             <TableCell align="center" sx={{ width: '20px' }} />
+            <TableCell align='center' sx={{ width: '20px' }}>
+              啟用專案
+            </TableCell>
             <TableCell align='center' sx={{ width: '20px' }}>
               專案名稱
             </TableCell>
@@ -394,7 +455,9 @@ export default function Home() {
               分機
             </TableCell>
             <TableCell align='center' sx={{ width: '30px' }}>
-              動作
+              <Stack direction='row' alignItems='center' justifyContent='center'>
+                動作 
+              </Stack>
             </TableCell>
             <TableCell align='center' sx={{ width: '20px' }}>
               撥打狀況
@@ -410,6 +473,7 @@ export default function Home() {
 
             return (
               <Fragment key={item.projectId}>
+
                 <TableRow 
                   key={item.projectId}
                   sx={{
@@ -421,6 +485,12 @@ export default function Home() {
                     <IconButton onClick={() => toggleRow(item.projectId)}>
                       {isOpen ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
                     </IconButton>
+                  </TableCell>
+                  <TableCell>
+                    <Switch 
+                      checked={item.isEnable}
+                      onChange={() => handleToggleProject(item)}
+                    />
                   </TableCell>
                   <TableCell align='center'>
                     {item.projectName}
@@ -452,32 +522,30 @@ export default function Home() {
                     {item.extension}
                   </TableCell>
                   <TableCell align='center'>
-                    <Stack direction='row'>
-                      {item.callStatus === 0 || item.callStatus === 4 ? 
-                        <IconButton 
-                          onClick={() => handleStartOutbound(item.projectId)}
-                        >
-                          <PlayArrowIcon />
-                        </IconButton> : 
-                        item.callStatus === 3 ? 
+                    {item.isEnable ? 
+                      <Stack direction='row'>
+                        {item.callStatus === 0 || item.callStatus === 4 ? 
                           <IconButton 
                             onClick={() => handleStartOutbound(item.projectId)}
                           >
-                            <RestartAltIcon />
+                            <PlayArrowIcon />
                           </IconButton> : 
-                          <IconButton 
-                            onClick={() => handlePauseOutbound(item.projectId) }
-                            disabled={item.projectCallState === 'calling' || item.projectCallState === 'waiting' }
-                            sx={{display: item.callStatus === 2 ? 'none' : 'block'}}
-                          >
-                            <PauseIcon /> 
-                          </IconButton> 
-                      }
-
-                      {/* <IconButton onClick={() => navigate(`/project/${item.projectId}`)}>
-                        <InfoOutlineIcon />
-                      </IconButton> */}
-                    </Stack>
+                          item.callStatus === 3 ? 
+                            <IconButton 
+                              onClick={() => handleStartOutbound(item.projectId)}
+                            >
+                              <RestartAltIcon />
+                            </IconButton> : 
+                            <IconButton 
+                              onClick={() => handlePauseOutbound(item.projectId) }
+                              disabled={item.projectCallState === 'calling' || item.projectCallState === 'waiting' }
+                              sx={{display: item.callStatus === 2 ? 'none' : 'block'}}
+                            >
+                              <PauseIcon /> 
+                            </IconButton> 
+                        }
+                      </Stack>
+                    : null}
                   </TableCell>
                   <TableCell align='left'>
                     <Stack>
@@ -597,7 +665,7 @@ export default function Home() {
                   </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell colSpan={7} sx={{ paddingBottom: 0, paddingTop: 0 }}>
+                  <TableCell colSpan={8} sx={{ paddingBottom: 0, paddingTop: 0 }}>
                     <Collapse in={isOpen} timeout="auto" unmountOnExit>
                       <Box sx={{ margin: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px', padding: '16px' }}>
                         <Typography variant="h6" gutterBottom>

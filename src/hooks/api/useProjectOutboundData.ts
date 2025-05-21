@@ -10,7 +10,6 @@ const useProjectOutboundData = () => {
     const fetchData = async () => {
     try {
       const queryString = new URLSearchParams({
-        isEnable: '1',
         limit: '-1',
         sort: 'created_at+desc'
       });
@@ -34,12 +33,15 @@ const useProjectOutboundData = () => {
             callFlowId: item.callFlowId,
             projectId: item.projectId,
             projectName: item.projectInfo.projectName,
+            startDate: item.projectInfo.startDate,
+            endDate: item.projectInfo.endDate,
             callStatus: 0,
             extension: item.callFlow.phone,
             projectCustomersDesc,
             currentCallIndex: 0, 
             projectCallState: 'init', // 撥打狀態
             projectCallData: null, // 撥打資料,
+            isEnable: item.projectInfo.isEnable,
           };
         })
       );

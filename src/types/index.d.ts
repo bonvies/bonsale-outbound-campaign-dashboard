@@ -6,6 +6,8 @@ declare global {
     callFlowId: string
     projectId: string
     projectName: string
+    startDate: Date;
+    endDate: Date;
     callStatus: number
     extension: string
     projectCustomersDesc: ProjectCustomersDesc[]
@@ -25,6 +27,7 @@ declare global {
         ServerNow: string;
       };
     } | null // 撥打資料
+    isEnable: boolean
   }
 
   interface ProjectCustomersDesc {
