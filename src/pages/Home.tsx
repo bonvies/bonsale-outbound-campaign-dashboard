@@ -1,5 +1,17 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableRow, IconButton, Chip, Stack, Collapse, Typography, Box } from '@mui/material';
+import { 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  IconButton,
+  Chip,
+  Stack,
+  Collapse,
+  Typography,
+  Box
+} from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
@@ -70,24 +82,7 @@ export default function Home() {
   // const navigate = useNavigate();
   const wsRef = useRef<WebSocket | null>(null); // 使用 useRef 管理 WebSocket 實例
 
-  const { projectOutboundData, setProjectOutboundData } = useProjectOutboundData(); 
-
-  const callStatusInfo = (callStatus: number): { state: string; color: 'default' | 'warning' | 'success' | 'error' } => {
-    switch (callStatus) {
-      case 0:
-        return { state: '未執行', color: 'default' };
-      case 1:
-        return { state: '執行中', color: 'warning' };
-      case 2:
-        return { state: '執行完成', color: 'success' };
-      case 3:
-        return { state: '執行失敗', color: 'error' };
-      case 4:
-        return { state: '暫停執行', color: 'warning' };
-      default:
-        return { state: '未知狀態', color: 'default' };
-    }
-  };
+  const { projectOutboundData, setProjectOutboundData } = useProjectOutboundData();
 
   const currentCallShow = ( projectCustomers: ProjectCustomersDesc[], customerId: string) => {
     return (projectCustomers.find(item => item.customerId === customerId))?.customer?.memberName ?? '-';
@@ -384,202 +379,240 @@ export default function Home() {
   }, []);
     
   return (
-    <Table>
-      <TableHead>
-        <TableRow>
-          <TableCell align="center" sx={{ width: '20px' }} />
-          <TableCell align='center' sx={{ width: '20px' }}>
-            專案名稱
-          </TableCell>
-          <TableCell align='center' sx={{ width: '20px' }}>
-            狀態
-          </TableCell>
-          <TableCell align='center' sx={{ width: '20px' }}>
-            分機
-          </TableCell>
-          <TableCell align='center' sx={{ width: '20px' }}>
-            動作
-          </TableCell>
-          <TableCell align='center' sx={{ width: '20px' }}>
-            撥打狀況
-          </TableCell>
-            <TableCell align='center' sx={{ width: '400px' }}>
-            撥打詳細描述
+    <Box sx={{ height: '100%', maxHeight:'100%', overflowY: 'scroll' }}>
+      <Table stickyHeader>
+        <TableHead>
+          <TableRow>
+            <TableCell align="center" sx={{ width: '20px' }} />
+            <TableCell align='center' sx={{ width: '20px' }}>
+              專案名稱
             </TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {projectOutboundData.map((item) => {
-          const { state, color } = callStatusInfo(item.callStatus);
-          const isOpen = openRows[item.projectId] || false;
+            <TableCell align='center' sx={{ width: '20px' }}>
+              狀態
+            </TableCell>
+            <TableCell align='center' sx={{ width: '20px' }}>
+              分機
+            </TableCell>
+            <TableCell align='center' sx={{ width: '30px' }}>
+              動作
+            </TableCell>
+            <TableCell align='center' sx={{ width: '20px' }}>
+              撥打狀況
+            </TableCell>
+              <TableCell align='center' sx={{ width: '250px' }}>
+              撥打詳細描述
+              </TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody sx={{  backgroundColor: 'white' }}>
+          {projectOutboundData.map((item) => {
+            const isOpen = openRows[item.projectId] || false;
 
-          return (
-            <Fragment key={item.projectId}>
-              <TableRow 
-                key={item.projectId}
-                sx={{
-                  backgroundColor: item.callStatus === 4 ? '#f5f5f5' : 'inherit',
-                  transition: 'background-color 0.3s'
-                }}
-              >
-                <TableCell align="center">
-                  <IconButton onClick={() => toggleRow(item.projectId)}>
-                    {isOpen ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-                  </IconButton>
-                </TableCell>
-                <TableCell align='center'>
-                  {item.projectName}
-                </TableCell>
-                <TableCell align='center'>
-                  <Chip label={state} color={color} />
-                </TableCell>
-                <TableCell align='center'>
-                  {item.extension}
-                </TableCell>
-                <TableCell align='center'>
-                  <Stack direction='row'>
-                    {item.callStatus === 0 || item.callStatus === 4 ? 
-                      <IconButton 
-                        onClick={() => handleStartOutbound(item.projectId)}
-                      >
-                        <PlayArrowIcon />
-                      </IconButton> : 
-                      item.callStatus === 3 ? 
+            return (
+              <Fragment key={item.projectId}>
+                <TableRow 
+                  key={item.projectId}
+                  sx={{
+                    backgroundColor: item.callStatus === 4 ? '#f5f5f5' : 'inherit',
+                    transition: 'background-color 0.3s'
+                  }}
+                >
+                  <TableCell align="center">
+                    <IconButton onClick={() => toggleRow(item.projectId)}>
+                      {isOpen ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                    </IconButton>
+                  </TableCell>
+                  <TableCell align='center'>
+                    {item.projectName}
+                  </TableCell>
+                  <TableCell align='center'>
+                    <Chip label={
+                      item.callStatus === 0 ? '未執行' :
+                      item.callStatus === 1 ? '執行中' :
+                      item.callStatus === 2 ? '執行完成' :
+                      item.callStatus === 3 ? '執行失敗' :
+                      item.callStatus === 4 ? '暫停執行' :
+                      '未知狀態'
+                    } sx={{ 
+                      marginBottom: '4px',
+                      color: () => 
+                        item.callStatus === 1  || 
+                        item.callStatus === 2 
+                        ? 'white' : 'black',
+                      bgcolor: (theme) => 
+                        item.callStatus === 0 ? theme.palette.primary.color50 :
+                        item.callStatus === 1 ? theme.palette.primary.main :
+                        item.callStatus === 2 ? theme.palette.primary.dark :
+                        item.callStatus === 3 ? theme.palette.warning.main :
+                        item.callStatus === 4 ? theme.palette.error.main :
+                        theme.palette.warning.light
+                    }} />
+                  </TableCell>
+                  <TableCell align='center'>
+                    {item.extension}
+                  </TableCell>
+                  <TableCell align='center'>
+                    <Stack direction='row'>
+                      {item.callStatus === 0 || item.callStatus === 4 ? 
                         <IconButton 
                           onClick={() => handleStartOutbound(item.projectId)}
                         >
-                          <RestartAltIcon />
+                          <PlayArrowIcon />
                         </IconButton> : 
-                        <IconButton 
-                          onClick={() => handlePauseOutbound(item.projectId) }
-                          disabled={item.projectCallState === 'calling' || item.projectCallState === 'waiting' }
-                          sx={{display: item.callStatus === 2 ? 'none' : 'block'}}
-                        >
-                          <PauseIcon /> 
-                        </IconButton> 
-                    }
-
-                    {/* <IconButton onClick={() => navigate(`/project/${item.projectId}`)}>
-                      <InfoOutlineIcon />
-                    </IconButton> */}
-                  </Stack>
-                </TableCell>
-                <TableCell align='left'>
-                  <Stack>
-                    <Chip
-                      label={`狀態: ${
-                        item.projectCallState === 'init' ? '準備撥打' : 
-                        item.projectCallState === 'waiting' ? '等待撥打' : 
-                        item.projectCallState === 'recorded' ? '撥打已記錄' :
-                        item.projectCallState === 'calling' ? '撥打中' : 
-                        item.projectCallState === 'finish' ? '撥打完成' : 
-                        item.projectCallState
-                      }`}
-                      color={
-                        item.projectCallState === 'calling' ? 'primary' : 
-                        item.projectCallState === 'waiting' ? 'warning' :
-                        item.projectCallState === 'recorded' ? 'success' :
-                        item.projectCallState === 'finish' ? 'success' :
-                        'default'
+                        item.callStatus === 3 ? 
+                          <IconButton 
+                            onClick={() => handleStartOutbound(item.projectId)}
+                          >
+                            <RestartAltIcon />
+                          </IconButton> : 
+                          <IconButton 
+                            onClick={() => handlePauseOutbound(item.projectId) }
+                            disabled={item.projectCallState === 'calling' || item.projectCallState === 'waiting' }
+                            sx={{display: item.callStatus === 2 ? 'none' : 'block'}}
+                          >
+                            <PauseIcon /> 
+                          </IconButton> 
                       }
-                      size="small"
-                      sx={{ marginBottom: '4px' }}
-                      />
-                    <Chip
-                      label={`撥打給: ${currentCallShow(item.projectCustomersDesc, item.projectCallData?.customerId || '-')} | ${item.projectCallData?.phone || '-'}`}
-                      variant="outlined"
-                      size="small"
-                    />
-                  </Stack>
-                </TableCell>
-                <TableCell align='left'>
-                  {item.projectCallData ? (
+
+                      {/* <IconButton onClick={() => navigate(`/project/${item.projectId}`)}>
+                        <InfoOutlineIcon />
+                      </IconButton> */}
+                    </Stack>
+                  </TableCell>
+                  <TableCell align='left'>
                     <Stack>
                       <Chip
-                        label={`Request ID: ${item.projectCallData.requestId || '-'}`}
-                        variant="outlined"
+                        label={`狀態: ${
+                          item.projectCallState === 'init' ? '準備撥打' : 
+                          item.projectCallState === 'waiting' ? '等待撥打' : 
+                          item.projectCallState === 'recorded' ? '撥打已記錄' :
+                          item.projectCallState === 'calling' ? '撥打中' : 
+                          item.projectCallState === 'finish' ? '撥打完成' : 
+                          item.projectCallState
+                        }`}
                         size="small"
-                        sx={{ marginBottom: '4px' }}
+                        sx={{ 
+                          marginBottom: '4px',
+                          color: () => 
+                            item.projectCallState === 'calling' || 
+                            item.projectCallState === 'finish' 
+                            ? 'white' : 'black',
+                          bgcolor: (theme) => 
+                            item.projectCallState === 'calling' ? theme.palette.warning.main :
+                            item.projectCallState === 'waiting' ? theme.palette.warning.color300 :
+                            item.projectCallState === 'recorded' ? theme.palette.success.color300 :
+                            item.projectCallState === 'finish' ? theme.palette.success.color700 :
+                            'default'
+                        }}
                       />
                       <Chip
-                        label={`Phone: ${item.projectCallData.phone || '-'}`}
+                        label={`撥打給: ${currentCallShow(item.projectCustomersDesc, item.projectCallData?.customerId || '-')} | ${item.projectCallData?.phone || '-'}`}
                         variant="outlined"
                         size="small"
-                        sx={{ marginBottom: '4px' }}
                       />
-                      <Chip
-                        label={`Project ID: ${item.projectCallData.projectId || '-'}`}
-                        variant="outlined"
-                        size="small"
-                        sx={{ marginBottom: '4px' }}
-                      />
-                      <Chip
-                        label={`Customer ID: ${item.projectCallData.customerId || '-'}`}
-                        variant="outlined"
-                        size="small"
-                        sx={{ marginBottom: '4px' }}
-                      />
-                      {item.projectCallData.activeCall && (
-                        <Stack sx={{ marginTop: '8px', width: '100%' }}>
-                          <Chip
-                            label={`Caller: ${item.projectCallData.activeCall.Caller || '-'}`}
-                            variant="outlined"
-                            size="small"
-                            sx={{ marginBottom: '4px' }}
-                          />
-                          <Chip
-                            label={`Callee: ${item.projectCallData.activeCall.Callee || '-'}`}
-                            variant="outlined"
-                            size="small"
-                            sx={{ marginBottom: '4px' }}
-                          />
-                          <Chip
-                            label={`Status: ${item.projectCallData.activeCall.Status || '-'}`}
-                            color={item.projectCallData.activeCall.Status === 'Routing' ? 'primary' : 'default'}
-                            size="small"
-                            sx={{ marginBottom: '4px' }}
-                          />
-                          <Chip
-                            label={`Last Change: ${new Date(item.projectCallData.activeCall.LastChangeStatus).toLocaleString() || '-'}`}
-                            variant="outlined"
-                            size="small"
-                            sx={{ marginBottom: '4px' }}
-                          />
-                          <Chip
-                            label={`Established At: ${new Date(item.projectCallData.activeCall.EstablishedAt).toLocaleString() || '-'}`}
-                            variant="outlined"
-                            size="small"
-                            sx={{ marginBottom: '4px' }}
-                          />
-                          <Chip
-                            label={`Server Time: ${new Date(item.projectCallData.activeCall.ServerNow).toLocaleString() || '-'}`}
-                            variant="outlined"
-                            size="small"
-                          />
-                        </Stack>
-                      )}
                     </Stack>
-                  ) : (
-                    <Chip label="No Data" variant="outlined" size="small" />
-                  )}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell colSpan={7} sx={{ paddingBottom: 0, paddingTop: 0 }}>
-                  <Collapse in={isOpen} timeout="auto" unmountOnExit>
-                    <Box sx={{ margin: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px', padding: '16px' }}>
-                      <Typography variant="h6" gutterBottom>
-                        詳細資訊
-                      </Typography>
-                      <CustomerDetailsTable projectCustomersDesc={item.projectCustomersDesc} />
-                    </Box>
-                  </Collapse>
-                </TableCell>
-              </TableRow>
-            </Fragment>
-          );
-        })}
-      </TableBody>
-    </Table>
+                  </TableCell>
+                  <TableCell align='left'>
+                    {item.projectCallData ? (
+                      <Stack>
+                        <Chip
+                          label={`Request ID: ${item.projectCallData.requestId || '-'}`}
+                          variant="outlined"
+                          size="small"
+                          sx={{ marginBottom: '4px' }}
+                        />
+                        <Chip
+                          label={`Phone: ${item.projectCallData.phone || '-'}`}
+                          variant="outlined"
+                          size="small"
+                          sx={{ marginBottom: '4px' }}
+                        />
+                        <Chip
+                          label={`Project ID: ${item.projectCallData.projectId || '-'}`}
+                          variant="outlined"
+                          size="small"
+                          sx={{ marginBottom: '4px' }}
+                        />
+                        <Chip
+                          label={`Customer ID: ${item.projectCallData.customerId || '-'}`}
+                          variant="outlined"
+                          size="small"
+                          sx={{ marginBottom: '4px' }}
+                        />
+                        {item.projectCallData.activeCall && (
+                          <Stack sx={{ marginTop: '8px', width: '100%' }}>
+                            <Chip
+                              label={`Caller: ${item.projectCallData.activeCall.Caller || '-'}`}
+                              variant="filled"
+                              size="small"
+                              sx={{ 
+                                marginBottom: '4px',
+                                bgcolor: (theme) => theme.palette.primary.color100,
+                              }}
+                            />
+                            <Chip
+                              label={`Callee: ${item.projectCallData.activeCall.Callee || '-'}`}
+                              variant="filled"
+                              size="small"
+                              sx={{ 
+                                marginBottom: '4px',
+                                bgcolor: (theme) => theme.palette.primary.color50,
+                              }}
+                            />
+                            <Chip
+                              label={`Status: ${item.projectCallData.activeCall.Status || '-'}`}
+                              color={item.projectCallData.activeCall.Status === 'Routing' ? 'primary' : 'default'}
+                              size="small"
+                              sx={{ 
+                                marginBottom: '4px',
+                                bgcolor: (theme) => 
+                                  item.projectCallData?.activeCall?.Status === 'Routing' ? theme.palette.warning.main :
+                                  item.projectCallData?.activeCall?.Status === 'Talking' ? theme.palette.success.color700 :
+                                  theme.palette.primary.color50
+                              }}
+                            />
+                            <Chip
+                              label={`Last Change: ${new Date(item.projectCallData.activeCall.LastChangeStatus).toLocaleString() || '-'}`}
+                              variant="outlined"
+                              size="small"
+                              sx={{ marginBottom: '4px' }}
+                            />
+                            <Chip
+                              label={`Established At: ${new Date(item.projectCallData.activeCall.EstablishedAt).toLocaleString() || '-'}`}
+                              variant="outlined"
+                              size="small"
+                              sx={{ marginBottom: '4px' }}
+                            />
+                            <Chip
+                              label={`Server Time: ${new Date(item.projectCallData.activeCall.ServerNow).toLocaleString() || '-'}`}
+                              variant="outlined"
+                              size="small"
+                            />
+                          </Stack>
+                        )}
+                      </Stack>
+                    ) : (
+                      <Chip label="No Data" variant="outlined" size="small" />
+                    )}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={7} sx={{ paddingBottom: 0, paddingTop: 0 }}>
+                    <Collapse in={isOpen} timeout="auto" unmountOnExit>
+                      <Box sx={{ margin: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px', padding: '16px' }}>
+                        <Typography variant="h6" gutterBottom>
+                          詳細資訊
+                        </Typography>
+                        <CustomerDetailsTable projectCustomersDesc={item.projectCustomersDesc} />
+                      </Box>
+                    </Collapse>
+                  </TableCell>
+                </TableRow>
+              </Fragment>
+            );
+          })}
+        </TableBody>
+      </Table> 
+    </Box>
   );
 };

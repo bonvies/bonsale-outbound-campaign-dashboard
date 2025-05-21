@@ -3,12 +3,30 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import theme from './theme/theme.ts';
 import custom from "./theme/custom.ts";
 
+import { Box, Container } from '@mui/material';
+import Navbar from './components/Navbar';
+
 const muiTheme = createTheme(theme, custom);
 
 function App() {
   return (
     <ThemeProvider theme={muiTheme}>
-      <Router />
+      <Box 
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100vh',
+          backgroundColor: (theme) => theme.palette.background.default,
+          color: (theme) => theme.palette.text.primary,
+        }}
+      >
+        <Box sx={{ flex: 0, flexDirection: 'column' }}>
+           <Navbar />
+        </Box>
+        <Container maxWidth='lg' sx={{ position:'relative', flex: 1, display:'flex', flexDirection: 'column', height:'100%', overflowY:'hidden' }}>
+          <Router />
+        </Container>
+      </Box>
     </ThemeProvider>
   )
 }
