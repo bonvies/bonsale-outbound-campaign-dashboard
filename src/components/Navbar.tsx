@@ -20,7 +20,7 @@ function Navbar() {
     >
       <Container maxWidth='lg'>
         <Typography variant='h5' fontWeight='400'>
-          專案自動外撥
+          專案自動外撥監控面板
         </Typography>
       </Container>
     </Box>

@@ -1,32 +1,29 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState, useEffect, useCallback } from 'react';
 
-const HTTP_HOST = import.meta.env.VITE_HTTP_HOST;
+import useGetBonsaleAutoDial from './api/useGetBonsaleAutoDial';
+import useGatBonsaleProject from './api/useGatBonsaleProject';
 
 const useProjectOutboundData = () => {
+  const { getBonsaleAutoDial } = useGetBonsaleAutoDial();
+  const { gatBonsaleProject } = useGatBonsaleProject();
+
+    const getBonsaleAutoDialCallback = useCallback(getBonsaleAutoDial, []);
+  const gatBonsaleProjectCallback = useCallback(gatBonsaleProject, []);
+
   const [projectOutboundData, setProjectOutboundData] = useState<ProjectOutboundDataType[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
     try {
-      const queryString = new URLSearchParams({
-        limit: '-1',
-        sort: 'created_at+desc'
-      });
-      const response = await axios.get(`${HTTP_HOST}/bonsale/auto-dial?${queryString}`);
-      const dataList = response.data.list;
-      // console.log('Project Auto Dial Data:', dataList);
+      const bonsaleAutoDial = await getBonsaleAutoDialCallback();
+      const dataList = bonsaleAutoDial.list;
 
       // 將資料轉換為符合專案撥打狀態的格式
       const updatedData = await Promise.all(
         dataList.map(async (item: Project) => {
           // 將專案中的客戶電話號碼提取出來
-          const queryString = new URLSearchParams({
-            limit: '-1',
-            projectIds: item.projectId
-          });
-          const customers = await axios.get(`${HTTP_HOST}/bonsale/project?${queryString}`);
-          const projectCustomersDesc = customers.data.list.map((customer: Project) => customer);
+          const customers = await gatBonsaleProjectCallback(item.projectId);
+          const projectCustomersDesc = customers.list.map((customer: Project) => customer);
           return {
             appId: item.appId,
             appSecret: item.appSecret,
@@ -46,7 +43,6 @@ const useProjectOutboundData = () => {
         })
       );
       setProjectOutboundData(updatedData);
-      return response.data;
     } catch (error) {
       console.error('Error fetching project auto-dial data:', error);
       throw error;
@@ -54,7 +50,7 @@ const useProjectOutboundData = () => {
     };
 
     fetchData();
-  }, []);
+  }, [gatBonsaleProjectCallback, getBonsaleAutoDialCallback]);
 
   return { projectOutboundData, setProjectOutboundData };
 };
