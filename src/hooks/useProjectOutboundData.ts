@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 import useGetBonsaleAutoDial from './api/useGetBonsaleAutoDial';
 import useGatBonsaleProject from './api/useGatBonsaleProject';
@@ -7,22 +7,18 @@ const useProjectOutboundData = () => {
   const { getBonsaleAutoDial } = useGetBonsaleAutoDial();
   const { gatBonsaleProject } = useGatBonsaleProject();
 
-    const getBonsaleAutoDialCallback = useCallback(getBonsaleAutoDial, []);
-  const gatBonsaleProjectCallback = useCallback(gatBonsaleProject, []);
-
   const [projectOutboundData, setProjectOutboundData] = useState<ProjectOutboundDataType[]>([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = async () => {
     try {
-      const bonsaleAutoDial = await getBonsaleAutoDialCallback();
+      const bonsaleAutoDial = await getBonsaleAutoDial();
       const dataList = bonsaleAutoDial.list;
 
       // 將資料轉換為符合專案撥打狀態的格式
       const updatedData = await Promise.all(
         dataList.map(async (item: Project) => {
           // 將專案中的客戶電話號碼提取出來
-          const customers = await gatBonsaleProjectCallback(item.projectId);
+          const customers = await gatBonsaleProject(item.projectId);
           const projectCustomersDesc = customers.list.map((customer: Project) => customer);
           return {
             appId: item.appId,
@@ -49,8 +45,9 @@ const useProjectOutboundData = () => {
     }
     };
 
+  useEffect(() => {
     fetchData();
-  }, [gatBonsaleProjectCallback, getBonsaleAutoDialCallback]);
+  }, []);
 
   return { projectOutboundData, setProjectOutboundData };
 };

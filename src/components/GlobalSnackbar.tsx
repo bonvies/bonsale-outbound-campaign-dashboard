@@ -1,4 +1,4 @@
-import React, { useState, useImperativeHandle, forwardRef } from 'react';
+import { useState, useImperativeHandle, forwardRef } from 'react';
 import Snackbar from '@mui/material/Snackbar';
 import MuiAlert, { AlertColor } from '@mui/material/Alert';
 
@@ -6,7 +6,7 @@ export interface GlobalSnackbarRef {
   showSnackbar: (message: string, severity?: AlertColor) => void;
 }
 
-const GlobalSnackbar = forwardRef<GlobalSnackbarRef>((props, ref) => {
+const GlobalSnackbar = forwardRef<GlobalSnackbarRef>((_props, ref) => {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [severity, setSeverity] = useState<AlertColor>('info');
@@ -26,9 +26,19 @@ const GlobalSnackbar = forwardRef<GlobalSnackbarRef>((props, ref) => {
       open={open}
       autoHideDuration={3000}
       onClose={handleClose}
-      anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
     >
-      <MuiAlert onClose={handleClose} severity={severity} sx={{ width: '100%' }} elevation={6} variant="filled">
+      <MuiAlert
+        onClose={handleClose}
+        severity={severity}
+        elevation={6}
+        variant="filled"
+        sx={{
+          width: '100%',
+          bgcolor: (theme) => theme.palette[severity].main,
+          color: (theme) => theme.palette[severity].contrastText,
+        }}
+      >
         {message}
       </MuiAlert>
     </Snackbar>

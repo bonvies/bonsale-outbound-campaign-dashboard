@@ -140,7 +140,7 @@ export default function Home() {
           );
         } else {
           // 調用 snackbar
-          snackbarRef.current?.showSnackbar('訊息內容', 'success');
+          snackbarRef.current?.showSnackbar('因有通話進行 所以暫停無法掛斷電話', 'warning');
           console.log('%c 因有通話進行 所以暫停無法掛斷電話','color: red');
           // 更新專案狀態為暫停
           setProjectOutboundData(prev =>
