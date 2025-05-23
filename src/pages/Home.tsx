@@ -33,6 +33,7 @@ import useUpdateVisitRecord from '../hooks/api/useUpdateVisitRecord';
 import useActiveOutbound from '../hooks/api/useActiveOutbound';
 import useFetchOutboundData from '../hooks/api/useFetchOutboundData';
 import useUpdateProject from '../hooks/api/useUpdateProject';
+import useUpdateBonsaleProjectAutoDialExecute from '../hooks/api/useUpdateBonsaleProjectAutoDialExecute';
 import useGetBonsaleProject from '../hooks/api/useGetBonsaleProject';
 import useHangup3cx from '../hooks/api/useHangup3cx';
 
@@ -88,6 +89,7 @@ export default function Home() {
   const { activeOutbound } = useActiveOutbound();
   const { fetchOutboundData } = useFetchOutboundData();
   const { updateProject } = useUpdateProject();
+  const { updateBonsaleProjectAutoDialExecute } = useUpdateBonsaleProjectAutoDialExecute();
   const { getBonsaleProject } = useGetBonsaleProject();
   const { Hangup3cx } = useHangup3cx();
 
@@ -343,14 +345,18 @@ export default function Home() {
               }) 
               console.log('之前的撥打資料:', prevCustomersDesc);
               if (!prevCustomersDesc) return item;
-              
               // 發送 API 請求到後端，更新撥打狀態...
+              console.log('發送 API 請求到後端，更新撥打狀態... 檢查 ID:', prevCustomersDesc.projectId, item.callFlowId);
               const updatePromises = [
                 updateCallStatus(
                   prevCustomersDesc.projectId,
                   prevCustomersDesc.customerId,
                   item.projectCallData?.activeCall?.Status === 'Talking' ? 1 : 2, // 更新撥打狀態為初始值
-                )
+                ),
+                updateBonsaleProjectAutoDialExecute(
+                  prevCustomersDesc.projectId,
+                  item.callFlowId,
+                ),
               ];
 
               if (prevCustomersDesc.callStatus === 2) {
