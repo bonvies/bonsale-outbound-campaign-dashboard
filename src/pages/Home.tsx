@@ -440,7 +440,7 @@ export default function Home() {
     wsRef.current.onclose = () => {
       console.log('WebSocket connection closed');
     };
-  }, [throttleAutoOutbound, setProjectOutboundData, updateCallStatus, updateDialUpdate, updateVisitRecord]);
+  }, [setProjectOutboundData, updateCallStatus, updateBonsaleProjectAutoDialExecute, updateDialUpdate, updateVisitRecord, throttleAutoOutbound]);
 
   const [openRows, setOpenRows] = useState<Record<string, boolean>>({}); // 用於跟踪每行的展開狀態
 
