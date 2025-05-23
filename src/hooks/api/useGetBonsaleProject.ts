@@ -3,7 +3,7 @@ import axios from 'axios';
 const HTTP_HOST = import.meta.env.VITE_HTTP_HOST;
 
 export default function useGatBonsaleProject() {
-  const gatBonsaleProject = async (projectId: string) => {
+  const getBonsaleProject = async (projectId: string) => {
     try {
       // 將專案中的客戶電話號碼提取出來
       const queryString = new URLSearchParams({
@@ -18,5 +18,5 @@ export default function useGatBonsaleProject() {
     }
   };
 
-  return { gatBonsaleProject };
+  return { getBonsaleProject };
 }

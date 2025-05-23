@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 
 import useGetBonsaleAutoDial from './api/useGetBonsaleAutoDial';
-import useGatBonsaleProject from './api/useGatBonsaleProject';
+import useGetBonsaleProject from './api/useGetBonsaleProject';
 
 const useProjectOutboundData = () => {
   const { getBonsaleAutoDial } = useGetBonsaleAutoDial();
-  const { gatBonsaleProject } = useGatBonsaleProject();
+  const { getBonsaleProject } = useGetBonsaleProject();
 
   const [projectOutboundData, setProjectOutboundData] = useState<ProjectOutboundDataType[]>([]);
 
@@ -18,7 +18,7 @@ const useProjectOutboundData = () => {
       const updatedData = await Promise.all(
         dataList.map(async (item: Project) => {
           // 將專案中的客戶電話號碼提取出來
-          const customers = await gatBonsaleProject(item.projectId);
+          const customers = await getBonsaleProject(item.projectId);
           const projectCustomersDesc = customers.list.map((customer: Project) => customer);
           return {
             appId: item.appId,

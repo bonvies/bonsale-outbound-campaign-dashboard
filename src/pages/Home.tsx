@@ -33,7 +33,7 @@ import useUpdateVisitRecord from '../hooks/api/useUpdateVisitRecord';
 import useActiveOutbound from '../hooks/api/useActiveOutbound';
 import useFetchOutboundData from '../hooks/api/useFetchOutboundData';
 import useUpdateProject from '../hooks/api/useUpdateProject';
-import useGatBonsaleProject from '../hooks/api/useGatBonsaleProject';
+import useGetBonsaleProject from '../hooks/api/useGetBonsaleProject';
 import useHangup3cx from '../hooks/api/useHangup3cx';
 
 import useThrottle from '../hooks/useThrottle';
@@ -88,7 +88,7 @@ export default function Home() {
   const { activeOutbound } = useActiveOutbound();
   const { fetchOutboundData } = useFetchOutboundData();
   const { updateProject } = useUpdateProject();
-  const { gatBonsaleProject } = useGatBonsaleProject();
+  const { getBonsaleProject } = useGetBonsaleProject();
   const { Hangup3cx } = useHangup3cx();
 
   const wsRef = useRef<WebSocket | null>(null); // 使用 useRef 管理 WebSocket 實例
@@ -275,7 +275,7 @@ export default function Home() {
           // 使用 async/await 處理 axios 請求
           (async () => {
             try {
-              const customers = await gatBonsaleProject(item.projectId);
+              const customers = await getBonsaleProject(item.projectId);
               const projectCustomersDesc = customers.list.map((customer: Project) => customer);
               setProjectOutboundData(prevInner =>
                 prevInner.map(innerItem =>
