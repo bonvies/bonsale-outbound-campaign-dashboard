@@ -35,11 +35,13 @@ import useFetchOutboundData from '../hooks/api/useFetchOutboundData';
 import useUpdateProject from '../hooks/api/useUpdateProject';
 import useUpdateBonsaleProjectAutoDialExecute from '../hooks/api/useUpdateBonsaleProjectAutoDialExecute';
 import useGetBonsaleProject from '../hooks/api/useGetBonsaleProject';
+import useGetOneBonsaleAutoDial from '../hooks/api/useGetOneBonsaleAutoDial';
 import useHangup3cx from '../hooks/api/useHangup3cx';
 
 import useThrottle from '../hooks/useThrottle';
 
 const WS_HOST = import.meta.env.VITE_WS_PORT_PROJECT_OUTBOUND;
+const WS_PORT_BONSALE_WEBHOOK = import.meta.env.VITE_WS_PORT_BONSALE_WEBHOOK;
 
 function CustomerDetailsTable({ projectCustomersDesc }: { projectCustomersDesc: ProjectCustomersDesc[] }) {
   return (
@@ -91,8 +93,10 @@ export default function Home() {
   const { updateProject } = useUpdateProject();
   const { updateBonsaleProjectAutoDialExecute } = useUpdateBonsaleProjectAutoDialExecute();
   const { getBonsaleProject } = useGetBonsaleProject();
+  const { getOneBonsaleAutoDial } = useGetOneBonsaleAutoDial();
   const { Hangup3cx } = useHangup3cx();
 
+  const wsBonsaleWebHookRef = useRef<WebSocket | null>(null); // 使用 useRef 管理 Bonsale WebHook WebSocket 實例
   const wsRef = useRef<WebSocket | null>(null); // 使用 useRef 管理 WebSocket 實例
 
   const snackbarRef = useRef<GlobalSnackbarRef>(null);
@@ -295,8 +299,132 @@ export default function Home() {
         return item;
       })
     );
+  };
+
+  // 建立 WebSocket 連線 Bonsale WebHook
+const connectBonsaleWebHookWebSocket = useCallback(() => {
+  if (!wsBonsaleWebHookRef.current) {
+    wsBonsaleWebHookRef.current = new WebSocket(WS_PORT_BONSALE_WEBHOOK);
   }
 
+  wsBonsaleWebHookRef.current.onopen = () => {
+    console.log('Bonsale WebHook WebSocket connection established');
+  };
+
+  wsBonsaleWebHookRef.current.onmessage = async (event) => {
+    const message: BonsaleWebHook = JSON.parse(event.data);
+
+    switch (message.type) {
+      case 'auto-dial.created': {
+        console.log('%c Received auto-dial.created message', 'font-size:16px; font-weight:bold', message);
+        const { projectId, callFlowId } = message.body;
+
+        // 取得單一專案外撥資料並新增
+        const newBonsaleAutoDial = await getOneBonsaleAutoDial(projectId, callFlowId);
+
+         // 將專案中的客戶電話號碼提取出來
+        const customers = await getBonsaleProject(projectId);
+        const projectCustomersDesc = customers.list.map((customer: Project) => customer);
+        console.log('newBonsaleAutoDial:', newBonsaleAutoDial);
+        console.log('專案中的客戶電話號碼:', projectCustomersDesc);
+        setProjectOutboundData(prevProjectOutboundData => {
+          return [
+            {
+              appId: newBonsaleAutoDial.appId,
+              appSecret: newBonsaleAutoDial.appSecret,
+              callFlowId: newBonsaleAutoDial.callFlowId,
+              projectId: newBonsaleAutoDial.projectId,
+              projectName: newBonsaleAutoDial.projectInfo.projectName,
+              startDate: newBonsaleAutoDial.projectInfo.startDate,
+              endDate: newBonsaleAutoDial.projectInfo.endDate,
+              callStatus: 0,
+              extension: newBonsaleAutoDial.callFlow.phone,
+              projectCustomersDesc,
+              projectCallState: 'init',
+              projectCallData: null, // 保持原有的撥打資料,
+              isEnable: newBonsaleAutoDial.projectInfo.isEnable,
+              toCall: null,
+            } as ProjectOutboundDataType,
+            ...prevProjectOutboundData
+          ]
+        });
+        break;
+      }
+      case 'auto-dial.updated': {
+        console.log('%c Received auto-dial.updated message', 'font-size:16px; font-weight:bold', message);
+
+        const { projectId, callFlowId } = message.body;
+
+        // 取得單一專案外撥資料並更新
+        const oneBonsaleAutoDial = await getOneBonsaleAutoDial(projectId, callFlowId);
+
+        // 將專案中的客戶電話號碼提取出來
+        const customers = await getBonsaleProject(projectId);
+        const projectCustomersDesc = customers.list.map((customer: Project) => customer);
+
+        setProjectOutboundData(prevProjectOutboundData => {
+          return prevProjectOutboundData.map((item) => {
+            if (item.projectId === projectId) {
+              // 更新專案狀態，補上 toCall 屬性
+              return {
+                appId: oneBonsaleAutoDial.appId,
+                appSecret: oneBonsaleAutoDial.appSecret,
+                callFlowId: oneBonsaleAutoDial.callFlowId,
+                projectId: oneBonsaleAutoDial.projectId,
+                projectName: oneBonsaleAutoDial.projectInfo.projectName,
+                startDate: oneBonsaleAutoDial.projectInfo.startDate,
+                endDate: oneBonsaleAutoDial.projectInfo.endDate,
+                callStatus: item.callStatus, // 保持原有的 callStatus
+                extension: oneBonsaleAutoDial.callFlow.phone,
+                projectCustomersDesc,
+                projectCallState: item.projectCallState, // 保持原有的撥打狀態
+                projectCallData: item.projectCallData, // 保持原有的撥打資料,
+                isEnable: oneBonsaleAutoDial.projectInfo.isEnable,
+                toCall: item.toCall ?? null, // 保持原有的 toCall，或設為 null
+              };
+            }
+            return item;
+          });
+        });
+
+        break;
+      }
+      case 'project.updated': {
+        console.log('%c Received project.updated message', 'font-size:16px; font-weight:bold', message);
+        const { Id: projectId, isEnable } = message.body;
+
+        setProjectOutboundData(prevProjectOutboundData => {
+          return prevProjectOutboundData.map((item) => {
+            if (item.projectId === projectId) {
+              // 更新專案狀態
+              return {
+                ...item,
+                isEnable: isEnable
+              };
+            }
+            return item;
+          });
+        });
+        
+        break;
+      }
+      default: {
+        console.warn('Unknown message type:', message);
+        return;
+      }
+    }
+  };
+
+  wsBonsaleWebHookRef.current.onerror = (error) => {
+    console.error('Bonsale WebHook WebSocket error:', error);
+  };
+
+  wsBonsaleWebHookRef.current.onclose = () => {
+    console.log('Bonsale WebHook WebSocket connection closed');
+  };
+}, [getBonsaleProject, getOneBonsaleAutoDial, setProjectOutboundData]);
+
+  // 建立 WebSocket 連線
   const connectWebSocket = useCallback(() => {
     if (!wsRef.current) {
       console.error('WebSocket is not initialized');
@@ -455,10 +583,14 @@ export default function Home() {
     wsRef.current = new WebSocket(WS_HOST); // 初始化 WebSocket
     connectWebSocket();
 
+    wsBonsaleWebHookRef.current = new WebSocket(WS_PORT_BONSALE_WEBHOOK);
+    connectBonsaleWebHookWebSocket();
+
     return () => {
       wsRef.current?.close(); // 清理 WebSocket 連線
+      wsBonsaleWebHookRef.current?.close(); // 清理 Bonsale WebHook WebSocket 連線
     };
-  }, [connectWebSocket]);
+  }, [connectBonsaleWebHookWebSocket, connectWebSocket]);
 
   // 為了避免用戶重新整理導致撥號中斷而設置的警告
   useEffect(() => {
@@ -548,11 +680,11 @@ export default function Home() {
                   </TableCell>
                 </TableRow>
             }
-            {projectOutboundData.map((item) => {
+            {projectOutboundData.map((item, index) => {
               const isOpen = openRows[item.projectId] || false;
 
               return (
-                <Fragment key={item.projectId}>
+                <Fragment key={item.projectId + index}>
                   <TableRow 
                     key={item.projectId}
                     sx={{

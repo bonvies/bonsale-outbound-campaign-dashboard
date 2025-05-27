@@ -31,10 +31,10 @@ const useProjectOutboundData = () => {
             callStatus: 0,
             extension: item.callFlow.phone,
             projectCustomersDesc,
-            currentCallIndex: 0, 
             projectCallState: 'init', // 撥打狀態
             projectCallData: null, // 撥打資料,
             isEnable: item.projectInfo.isEnable,
+            toCall: null, // 待撥打的客戶
           };
         })
       );
