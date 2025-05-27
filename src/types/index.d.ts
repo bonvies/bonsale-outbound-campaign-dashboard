@@ -181,7 +181,6 @@ declare global {
     nextCallAfter: string | null;
     callStatus: number;
   }
-
   interface Project {
     d: string;
     projectId: string;
@@ -280,7 +279,6 @@ declare global {
       callStatus: number;
     }[];
   }
-
   interface Customer {
     id: string;
     createdAt: string;
@@ -329,7 +327,6 @@ declare global {
     department: string | null;
     jobTitle: string | null;
   };
-
   interface ToCallResponse {
     message: string;
     token_3cx: string;
@@ -359,7 +356,6 @@ declare global {
       reasontext: string;
     };
   }
-
   interface Call {
     requestId: string;
     phone: string;
@@ -374,6 +370,37 @@ declare global {
       ServerNow: string;
     };
   }
+
+  type BonsaleWebHook =
+    | {
+        type: "auto-dial.created";
+        body: {
+          Id: string;
+          projectId: string;
+          callFlowId: string;
+        };
+        query: string;
+        user: string;
+      }
+    | {
+        type: "auto-dial.updated";
+        body: {
+          Id: string;
+          projectId: string;
+          callFlowId: string;
+        };
+        query: string;
+        user: string;
+      }
+    | {
+        type: "project.updated";
+        body: {
+          Id: string;
+          isEnable: boolean;
+        };
+        query: string;
+        user: string;
+      };
 }
 
 export {};
