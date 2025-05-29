@@ -11,7 +11,7 @@ export default function useHangup3cx() {
     try {
       // 發送掛斷電話的請求
       console.log('token_3cx', token_3cx);
-      const result = await axios.post(`${HTTP_HOST}/callControl/hangup`, { dn, id, token_3cx });
+      const result = await axios.post(`${HTTP_HOST}/api/callControl/hangup`, { dn, id, token_3cx });
       return result.data as ToCallResponse;
     } catch (error) {
       console.error('Error starting outbound:', error);

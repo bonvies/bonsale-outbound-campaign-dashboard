@@ -1,6 +1,5 @@
 
-function Project() {
-  
+function Project() {  
   return (
     <>
       Project
