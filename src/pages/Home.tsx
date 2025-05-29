@@ -40,8 +40,7 @@ import useHangup3cx from '../hooks/api/useHangup3cx';
 
 import useThrottle from '../hooks/useThrottle';
 
-const WS_HOST = import.meta.env.VITE_WS_PORT_PROJECT_OUTBOUND;
-const WS_PORT_BONSALE_WEBHOOK = import.meta.env.VITE_WS_PORT_BONSALE_WEBHOOK;
+const WS_HOST = import.meta.env.VITE_WS_HOST;
 
 function CustomerDetailsTable({ projectCustomersDesc }: { projectCustomersDesc: ProjectCustomersDesc[] }) {
   return (
@@ -304,7 +303,7 @@ export default function Home() {
   // 建立 WebSocket 連線 Bonsale WebHook
 const connectBonsaleWebHookWebSocket = useCallback(() => {
   if (!wsBonsaleWebHookRef.current) {
-    wsBonsaleWebHookRef.current = new WebSocket(WS_PORT_BONSALE_WEBHOOK);
+    return console.error('Bonsale WebHook WebSocket is not initialized');
   }
 
   wsBonsaleWebHookRef.current.onopen = () => {
@@ -427,8 +426,7 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
   // 建立 WebSocket 連線
   const connectWebSocket = useCallback(() => {
     if (!wsRef.current) {
-      console.error('WebSocket is not initialized');
-      return;
+      return console.error('WebSocket is not initialized');
     }
 
     wsRef.current.onopen = () => {
@@ -580,10 +578,10 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
   };
 
   useEffect(() => {
-    wsRef.current = new WebSocket(WS_HOST); // 初始化 WebSocket
+    wsRef.current = new WebSocket(`${WS_HOST}/ws/projectOutbound`); // 初始化 WebSocket
     connectWebSocket();
 
-    wsBonsaleWebHookRef.current = new WebSocket(WS_PORT_BONSALE_WEBHOOK);
+    wsBonsaleWebHookRef.current = new WebSocket(`${WS_HOST}/ws/bonsaleWebHook`); // 初始化 Bonsale WebHook WebSocket
     connectBonsaleWebHookWebSocket();
 
     return () => {

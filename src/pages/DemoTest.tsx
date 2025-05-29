@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 
 const HTTP_HOST = import.meta.env.VITE_HTTP_HOST;
-const WS_HOST = import.meta.env.VITE_WS_PORT_OUTBOUND_CAMPAIGM;
+const WS_HOST = import.meta.env.VITE_WS_HOST;
 
 function DemoTest() {
   const [clientId, setClientId] = useState('');
@@ -104,7 +104,7 @@ function DemoTest() {
   const connectWs = (clientId: string) => {
   
     // 建立 WebSocket 連線
-    const ws = new WebSocket(WS_HOST);
+    const ws = new WebSocket(`${WS_HOST}/ws/outboundCampaigm`);
   
     // 當 WebSocket 連線成功時觸發
     ws.onopen = () => {
