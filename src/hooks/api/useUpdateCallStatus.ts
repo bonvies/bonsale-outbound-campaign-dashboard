@@ -5,7 +5,7 @@ const HTTP_HOST = import.meta.env.VITE_HTTP_HOST;
 export default function useUpdateCallStatus() {
   const updateCallStatus = async (projectId: string, customerId: string, callStatus: number) => {
     try {
-      const response = await axios.put(`${HTTP_HOST}/bonsale/project/${projectId}/customer/${customerId}/callStatus`, { callStatus });
+      const response = await axios.put(`${HTTP_HOST}/api/bonsale/project/${projectId}/customer/${customerId}/callStatus`, { callStatus });
       return response.data;
     } catch (error) {
       console.error('Error updating call status:', error);

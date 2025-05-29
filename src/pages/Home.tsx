@@ -277,7 +277,6 @@ export default function Home() {
     setProjectOutboundData(prev => 
       prev.map(item => {
         if (item.projectId === projectId) {
-          // 使用 async/await 處理 axios 請求
           (async () => {
             try {
               const customers = await getBonsaleProject(item.projectId);

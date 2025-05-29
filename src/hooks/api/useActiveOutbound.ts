@@ -12,7 +12,7 @@ export default function useActiveOutbound() {
   ): Promise<ToCallResponse> => {
     try {
       // 發送撥打電話的請求
-      const result = await axios.post(`${HTTP_HOST}/projectOutbound`, {
+      const result = await axios.post(`${HTTP_HOST}/api/projectOutbound`, {
         grant_type: "client_credentials",
         client_id: appId,
         client_secret: appSecret,

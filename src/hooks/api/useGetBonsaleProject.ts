@@ -10,7 +10,7 @@ export default function useGatBonsaleProject() {
         limit: '-1',
         projectIds: projectId
       });
-      const response = await axios.get(`${HTTP_HOST}/bonsale/project?${queryString}`);
+      const response = await axios.get(`${HTTP_HOST}/api/bonsale/project?${queryString}`);
       return response.data;
     } catch (error) {
       console.error('Error updating call status:', error);

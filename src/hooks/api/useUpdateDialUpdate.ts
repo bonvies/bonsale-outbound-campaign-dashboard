@@ -5,7 +5,7 @@ const HTTP_HOST = import.meta.env.VITE_HTTP_HOST;
 export default function useUpdateDialUpdate() {
   const updateDialUpdate = async (projectId: string, customerId: string) => {
     try {
-      const response = await axios.put(`${HTTP_HOST}/bonsale/project/${projectId}/customer/${customerId}/dialUpdate`, {});
+      const response = await axios.put(`${HTTP_HOST}/api/bonsale/project/${projectId}/customer/${customerId}/dialUpdate`, {});
       return response.data;
     } catch (error) {
       console.error('Error updating dial update:', error);

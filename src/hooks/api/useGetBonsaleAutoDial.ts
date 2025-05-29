@@ -9,7 +9,7 @@ export default function useGetBonsaleAutoDial() {
         limit: '-1',
         sort: 'created_at+desc'
       });
-      const response = await axios.get(`${HTTP_HOST}/bonsale/project/auto-dial?${queryString}`);
+      const response = await axios.get(`${HTTP_HOST}/api/bonsale/project/auto-dial?${queryString}`);
       return response.data;
     } catch (error) {
       console.error('Error updating call status:', error);
