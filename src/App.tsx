@@ -8,6 +8,12 @@ import Navbar from './components/Navbar';
 
 const muiTheme = createTheme(theme, custom);
 
+const { protocol, hostname } = window.location;
+// 假設 API port 寫死 3020
+const port = import.meta.env.VITE_API_PORT;
+const HTTP_HOST = `${protocol}//${hostname}:${port}`;
+console.log('HTTP_HOST:', HTTP_HOST);
+
 function App() {
   return (
     <ThemeProvider theme={muiTheme}>

@@ -3,8 +3,15 @@ import LocalPhoneIcon from '@mui/icons-material/LocalPhone';
 import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 
-const HTTP_HOST = import.meta.env.VITE_HTTP_HOST;
-const WS_HOST = import.meta.env.VITE_WS_HOST;
+// 取得本機 IP domain
+const { hostname } = window.location;
+
+const api_protocol = import.meta.env.VITE_API_PROTOCOL;
+
+const port = import.meta.env.VITE_API_PORT;
+const HTTP_HOST = `${api_protocol}://${hostname}:${port}`;
+const ws_protocol = import.meta.env.VITE_WS_PROTOCOL;
+const WS_HOST = `${ws_protocol}://${hostname}:${port}`;
 
 function DemoTest() {
   const [clientId, setClientId] = useState('');

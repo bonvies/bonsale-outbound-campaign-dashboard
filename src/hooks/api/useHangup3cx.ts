@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const HTTP_HOST = import.meta.env.VITE_HTTP_HOST;
+// 取得本機 IP domain
+const { hostname } = window.location;
+
+const api_protocol = import.meta.env.VITE_API_PROTOCOL;
+const port = import.meta.env.VITE_API_PORT;
+const HTTP_HOST = `${api_protocol}://${hostname}:${port}`;
 
 export default function useHangup3cx() {
   const Hangup3cx = async (

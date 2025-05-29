@@ -40,7 +40,12 @@ import useHangup3cx from '../hooks/api/useHangup3cx';
 
 import useThrottle from '../hooks/useThrottle';
 
-const WS_HOST = import.meta.env.VITE_WS_HOST;
+// 取得本機 IP domain
+const { hostname } = window.location;
+
+const port = import.meta.env.VITE_API_PORT;
+const ws_protocol = import.meta.env.VITE_WS_PROTOCOL;
+const WS_HOST = `${ws_protocol}://${hostname}:${port}`;
 
 function CustomerDetailsTable({ projectCustomersDesc }: { projectCustomersDesc: ProjectCustomersDesc[] }) {
   return (
