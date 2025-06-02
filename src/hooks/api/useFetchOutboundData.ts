@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useCallback } from 'react';
 
 // 取得本機 IP domain
 const { hostname } = window.location;
@@ -8,7 +9,7 @@ const port = import.meta.env.VITE_API_PORT;
 const HTTP_HOST = `${api_protocol}://${hostname}:${port}`;
 
 export default function useFetchOutboundData() {
-  const fetchOutboundData = async (params: Record<string, string>) => {
+  const fetchOutboundData = useCallback(async (params: Record<string, string>) => {
     try {
       const queryString = new URLSearchParams(params).toString();
       const response = await axios.get(`${HTTP_HOST}/api/bonsale/outbound?${queryString}`);
@@ -17,7 +18,7 @@ export default function useFetchOutboundData() {
       console.error('Error fetching outbound data:', error);
       throw error;
     }
-  };
+  }, []);
 
   return { fetchOutboundData };
 }

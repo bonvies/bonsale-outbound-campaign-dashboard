@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useCallback } from 'react';
 
 // 取得本機 IP domain
 const { hostname } = window.location;
@@ -8,7 +9,7 @@ const port = import.meta.env.VITE_API_PORT;
 const HTTP_HOST = `${api_protocol}://${hostname}:${port}`;
 
 export default function useGetOneBonsaleAutoDial() {
-  const getOneBonsaleAutoDial = async (projectId: string, callFlowId: string) => {
+  const getOneBonsaleAutoDial = useCallback(async (projectId: string, callFlowId: string) => {
     try {
       const response = await axios.get(`${HTTP_HOST}/api/bonsale/project/${projectId}/auto-dial/${callFlowId}`);
       return response.data;
@@ -16,7 +17,7 @@ export default function useGetOneBonsaleAutoDial() {
       console.error('Error updating call status:', error);
       throw error;
     }
-  };
+  }, []);
 
   return { getOneBonsaleAutoDial };
 }

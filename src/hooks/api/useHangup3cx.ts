@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useCallback } from 'react';
 
 // 取得本機 IP domain
 const { hostname } = window.location;
@@ -8,7 +9,7 @@ const port = import.meta.env.VITE_API_PORT;
 const HTTP_HOST = `${api_protocol}://${hostname}:${port}`;
 
 export default function useHangup3cx() {
-  const Hangup3cx = async (
+  const Hangup3cx = useCallback(async (
     dn: string,
     id: number,
     token_3cx: string,
@@ -22,7 +23,7 @@ export default function useHangup3cx() {
       console.error('Error starting outbound:', error);
       throw error;
     }
-  };
+  }, []);
 
   return { Hangup3cx };
 }

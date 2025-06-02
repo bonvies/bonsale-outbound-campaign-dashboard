@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useCallback } from 'react';
 
 // 取得本機 IP domain
 const { hostname } = window.location;
@@ -8,7 +9,7 @@ const port = import.meta.env.VITE_API_PORT;
 const HTTP_HOST = `${api_protocol}://${hostname}:${port}`;
 
 export default function useUpdateCallStatus() {
-  const updateCallStatus = async (projectId: string, customerId: string, callStatus: number) => {
+  const updateCallStatus = useCallback(async (projectId: string, customerId: string, callStatus: number) => {
     try {
       const response = await axios.put(`${HTTP_HOST}/api/bonsale/project/${projectId}/customer/${customerId}/callStatus`, { callStatus });
       return response.data;
@@ -16,7 +17,7 @@ export default function useUpdateCallStatus() {
       console.error('Error updating call status:', error);
       throw error;
     }
-  };
+  }, []);
 
   return { updateCallStatus };
 }

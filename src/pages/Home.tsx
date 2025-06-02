@@ -23,8 +23,10 @@ import PauseIcon from '@mui/icons-material/Pause';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import InfoOutlineIcon from '@mui/icons-material/InfoOutline';
 
 import GlobalSnackbar, { GlobalSnackbarRef } from '../components/GlobalSnackbar';
+import ProjectCustomersDialog from '../components/ProjectCustomersDialog';
 
 import useProjectOutboundData from '../hooks/useProjectOutboundData';
 import useUpdateCallStatus from '../hooks/api/useUpdateCallStatus';
@@ -99,6 +101,16 @@ export default function Home() {
   const { getBonsaleProject } = useGetBonsaleProject();
   const { getOneBonsaleAutoDial } = useGetOneBonsaleAutoDial();
   const { Hangup3cx } = useHangup3cx();
+
+  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null); // 用於跟踪當前展開的專案 ID
+
+  const handleExpandClick = (isOpen: boolean, projectId?: string) => {
+    if (isOpen && projectId) {
+      setExpandedProjectId(projectId);
+    } else {
+      setExpandedProjectId(null);
+    }
+  }
 
   const wsBonsaleWebHookRef = useRef<WebSocket | null>(null); // 使用 useRef 管理 Bonsale WebHook WebSocket 實例
   const wsRef = useRef<WebSocket | null>(null); // 使用 useRef 管理 WebSocket 實例
@@ -757,6 +769,11 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                                 <PauseIcon /> 
                               </IconButton> 
                           }
+                          <IconButton 
+                            onClick={() => handleExpandClick(true, item.projectId)}
+                          >
+                            <InfoOutlineIcon /> 
+                          </IconButton> 
                         </Stack>
                       : null}
                     </TableCell>
@@ -897,6 +914,7 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
           </TableBody>
         </Table> 
       </Box>
+      <ProjectCustomersDialog onOpen={Boolean(expandedProjectId)} onClose={()=>{handleExpandClick(false)}} projectId={expandedProjectId}/>
     </>
   );
 };

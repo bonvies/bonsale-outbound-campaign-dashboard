@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import useGetBonsaleAutoDial from './api/useGetBonsaleAutoDial';
 import useGetBonsaleProject from './api/useGetBonsaleProject';
@@ -9,15 +9,13 @@ const useProjectOutboundData = () => {
 
   const [projectOutboundData, setProjectOutboundData] = useState<ProjectOutboundDataType[]>([]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const bonsaleAutoDial = await getBonsaleAutoDial();
       const dataList = bonsaleAutoDial.list;
 
-      // 將資料轉換為符合專案撥打狀態的格式
       const updatedData = await Promise.all(
         dataList.map(async (item: Project) => {
-          // 將專案中的客戶電話號碼提取出來
           const customers = await getBonsaleProject(item.projectId);
           const projectCustomersDesc = customers.list.map((customer: Project) => customer);
           return {
@@ -31,10 +29,10 @@ const useProjectOutboundData = () => {
             callStatus: 0,
             extension: item.callFlow.phone,
             projectCustomersDesc,
-            projectCallState: 'init', // 撥打狀態
-            projectCallData: null, // 撥打資料,
+            projectCallState: 'init',
+            projectCallData: null,
             isEnable: item.projectInfo.isEnable,
-            toCall: null, // 待撥打的客戶
+            toCall: null,
           };
         })
       );
@@ -43,11 +41,11 @@ const useProjectOutboundData = () => {
       console.error('Error fetching project auto-dial data:', error);
       throw error;
     }
-    };
+  }, [getBonsaleAutoDial, getBonsaleProject]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   return { projectOutboundData, setProjectOutboundData };
 };

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useCallback } from 'react';
 
 // 取得本機 IP domain
 const { hostname } = window.location;
@@ -8,7 +9,7 @@ const port = import.meta.env.VITE_API_PORT;
 const HTTP_HOST = `${api_protocol}://${hostname}:${port}`;
 
 export default function useActiveOutbound() {
-  const activeOutbound = async (
+  const activeOutbound = useCallback(async (
     projectId: string,
     customerId: string,
     phone: string,
@@ -30,7 +31,7 @@ export default function useActiveOutbound() {
       console.error('Error starting outbound:', error);
       throw error;
     }
-  };
+  }, []);
 
   return { activeOutbound };
 }
