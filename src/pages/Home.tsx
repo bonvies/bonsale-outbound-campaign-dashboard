@@ -170,10 +170,16 @@ export default function Home() {
           // 如果有資料 就撥打電話
           const { phone } = firstOutboundData[0].customer; 
           const { projectId, customerId } = firstOutboundData[0]; 
-          console.log('phone:', phone);
+
+          // 處理 phone 格式，移除非數字字元
+          const cleanPhone = phone.replace(/\D/g, '');
+
+          // TODO: 日後可能要再增加過濾條件 電話有可能會有 +886 886 886-886 886886886 等等格式
+
+          console.log('phone:', phone, 'cleanPhone:', cleanPhone);
           console.log('projectId:', projectId);
           console.log('customerId:', customerId);
-          const toCall: ToCallResponse = await activeOutbound(projectId, customerId, phone, appId, appSecret);
+          const toCall: ToCallResponse = await activeOutbound(projectId, customerId, cleanPhone, appId, appSecret);
   
           // 撥打電話的時候 會回傳 一個 callid 我們可以利用這個 callid 來查詢當前的撥打狀態
           const { callid } = toCall.currentCall?.result ?? {};

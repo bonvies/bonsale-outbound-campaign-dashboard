@@ -61,12 +61,6 @@ export default function ProjectCustomersDialog({ onOpen, onClose, projectId }: P
       <DialogActions>
         <Button 
           onClick={handleClose}
-          variant="outlined"
-        >
-          取消
-        </Button>
-        <Button 
-          onClick={handleClose}
           variant="contained"
         >
           確認
