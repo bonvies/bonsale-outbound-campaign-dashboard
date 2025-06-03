@@ -46,9 +46,12 @@ export default function ProjectCustomersDialog({ onOpen, onClose, projectId }: P
       onClose={handleClose}
       aria-labelledby="ProjectCustomersDialog-title"
       aria-describedby="ProjectCustomersDialog-description"
+      PaperProps={{
+        sx: { width: 600, height: '100%' }
+      }}
     >
       <DialogTitle id="alert-dialog-title">
-        {"Use Google's location service?"}
+        專案名單撥打狀態
       </DialogTitle>
       <DialogContent>
         <DialogContentText id="alert-dialog-description">

@@ -24,7 +24,7 @@ export default function useUpdateVisitRecord() {
     }
   ) => {
     try {
-      const response = await axios.put(`${HTTP_HOST}/api/bonsale/project/customer/visit`, {
+      const response = await axios.post(`${HTTP_HOST}/api/bonsale/project/customer/visit`, {
         projectId,
         customerId,
         visitType,

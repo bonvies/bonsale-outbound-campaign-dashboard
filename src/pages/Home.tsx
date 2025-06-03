@@ -10,8 +10,8 @@ import {
   IconButton,
   Chip,
   Stack,
-  Collapse,
-  Typography,
+  // Collapse,
+  // Typography,
   Box,
   Switch,
   Button,
@@ -21,8 +21,7 @@ import {
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+
 import InfoOutlineIcon from '@mui/icons-material/InfoOutline';
 
 import GlobalSnackbar, { GlobalSnackbarRef } from '../components/GlobalSnackbar';
@@ -36,7 +35,7 @@ import useActiveOutbound from '../hooks/api/useActiveOutbound';
 import useFetchOutboundData from '../hooks/api/useFetchOutboundData';
 import useUpdateProject from '../hooks/api/useUpdateProject';
 import useUpdateBonsaleProjectAutoDialExecute from '../hooks/api/useUpdateBonsaleProjectAutoDialExecute';
-import useGetBonsaleProject from '../hooks/api/useGetBonsaleProject';
+
 import useGetOneBonsaleAutoDial from '../hooks/api/useGetOneBonsaleAutoDial';
 import useHangup3cx from '../hooks/api/useHangup3cx';
 
@@ -49,46 +48,6 @@ const port = import.meta.env.VITE_API_PORT;
 const ws_protocol = import.meta.env.VITE_WS_PROTOCOL;
 const WS_HOST = `${ws_protocol}://${hostname}:${port}`;
 
-function CustomerDetailsTable({ projectCustomersDesc }: { projectCustomersDesc: ProjectCustomersDesc[] }) {
-  return (
-    <Table size="small" sx={{ marginTop: '16px' }}>
-      <TableHead>
-        <TableRow>
-          <TableCell>客戶姓名</TableCell>
-          <TableCell>電話</TableCell>
-          <TableCell>撥打狀態</TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {projectCustomersDesc.map((desc, index) => (
-          <TableRow key={index}>
-            <TableCell>{desc.customer?.memberName || '未知'}</TableCell>
-            <TableCell>{desc.customer?.phone || '無電話'}</TableCell>
-            <TableCell>
-            <Chip
-              label={
-                desc.callStatus === 0 ? '初始值' : 
-                desc.callStatus === 1 ? '成功接通' :
-                desc.callStatus === 2 ? '不成功接通' : 
-                '未知的狀態'
-              }
-              color={
-                desc.callStatus === 0 ? 'default' : 
-                desc.callStatus === 1 ? 'success' :
-                desc.callStatus === 2 ? 'error' : 
-                'default'
-              }
-              size="small"
-              sx={{ marginBottom: '4px' }}
-            />
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-};
-
 export default function Home() {
   // 引入 自定義 API Hook
   const { updateCallStatus } = useUpdateCallStatus();
@@ -98,7 +57,7 @@ export default function Home() {
   const { fetchOutboundData } = useFetchOutboundData();
   const { updateProject } = useUpdateProject();
   const { updateBonsaleProjectAutoDialExecute } = useUpdateBonsaleProjectAutoDialExecute();
-  const { getBonsaleProject } = useGetBonsaleProject();
+
   const { getOneBonsaleAutoDial } = useGetOneBonsaleAutoDial();
   const { Hangup3cx } = useHangup3cx();
 
@@ -118,10 +77,6 @@ export default function Home() {
   const snackbarRef = useRef<GlobalSnackbarRef>(null);
 
   const { projectOutboundData, setProjectOutboundData } = useProjectOutboundData();
-
-  const currentCallShow = ( projectCustomers: ProjectCustomersDesc[], customerId: string) => {
-    return (projectCustomers.find(item => item.customerId === customerId))?.customer?.memberName ?? '-';
-  }
 
   // 開始撥打電話
   const startOutbound = (projectId: string) => {
@@ -296,12 +251,10 @@ export default function Home() {
         if (item.projectId === projectId) {
           (async () => {
             try {
-              const customers = await getBonsaleProject(item.projectId);
-              const projectCustomersDesc = customers.list.map((customer: Project) => customer);
               setProjectOutboundData(prevInner =>
                 prevInner.map(innerItem =>
                   innerItem.projectId === projectId
-                    ? { ...innerItem, isEnable: !isEnable, projectCustomersDesc }
+                    ? { ...innerItem, isEnable: !isEnable }
                     : innerItem
                 )
               );
@@ -337,11 +290,7 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
         // 取得單一專案外撥資料並新增
         const newBonsaleAutoDial = await getOneBonsaleAutoDial(projectId, callFlowId);
 
-         // 將專案中的客戶電話號碼提取出來
-        const customers = await getBonsaleProject(projectId);
-        const projectCustomersDesc = customers.list.map((customer: Project) => customer);
         console.log('newBonsaleAutoDial:', newBonsaleAutoDial);
-        console.log('專案中的客戶電話號碼:', projectCustomersDesc);
         setProjectOutboundData(prevProjectOutboundData => {
           return [
             {
@@ -354,7 +303,6 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
               endDate: newBonsaleAutoDial.projectInfo.endDate,
               callStatus: 0,
               extension: newBonsaleAutoDial.callFlow.phone,
-              projectCustomersDesc,
               projectCallState: 'init',
               projectCallData: null, // 保持原有的撥打資料,
               isEnable: newBonsaleAutoDial.projectInfo.isEnable,
@@ -373,10 +321,6 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
         // 取得單一專案外撥資料並更新
         const oneBonsaleAutoDial = await getOneBonsaleAutoDial(projectId, callFlowId);
 
-        // 將專案中的客戶電話號碼提取出來
-        const customers = await getBonsaleProject(projectId);
-        const projectCustomersDesc = customers.list.map((customer: Project) => customer);
-
         setProjectOutboundData(prevProjectOutboundData => {
           return prevProjectOutboundData.map((item) => {
             if (item.projectId === projectId) {
@@ -391,7 +335,6 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                 endDate: oneBonsaleAutoDial.projectInfo.endDate,
                 callStatus: item.callStatus, // 保持原有的 callStatus
                 extension: oneBonsaleAutoDial.callFlow.phone,
-                projectCustomersDesc,
                 projectCallState: item.projectCallState, // 保持原有的撥打狀態
                 projectCallData: item.projectCallData, // 保持原有的撥打資料,
                 isEnable: oneBonsaleAutoDial.projectInfo.isEnable,
@@ -437,7 +380,7 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
   wsBonsaleWebHookRef.current.onclose = () => {
     console.log('Bonsale WebHook WebSocket connection closed');
   };
-}, [getBonsaleProject, getOneBonsaleAutoDial, setProjectOutboundData]);
+}, [getOneBonsaleAutoDial, setProjectOutboundData]);
 
   // 建立 WebSocket 連線
   const connectWebSocket = useCallback(() => {
@@ -480,44 +423,39 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                 projectCallData,
               }; 
             } else if (item.projectCallData) { // 找到之前記錄在專案的撥打資料 
-              // 將先前的撥打狀態記錄到 projectCustomersDesc 中
-              const updatedCustomersDesc = [...item.projectCustomersDesc];
-              const prevCustomersDesc = updatedCustomersDesc.find(customersDesc => {
-                return item.projectCallData && customersDesc.customerId === item.projectCallData.customerId;
-              }) 
-              console.log('之前的撥打資料:', prevCustomersDesc);
-              if (!prevCustomersDesc) return item;
+              console.log('之前的撥打資料:', item.projectCallData);
+              if (!item.projectCallData) return item;
               // 發送 API 請求到後端，更新撥打狀態...
-              console.log('發送 API 請求到後端，更新撥打狀態... 檢查 ID:', prevCustomersDesc.projectId, item.callFlowId);
+              console.log('發送 API 請求到後端，更新撥打狀態... 檢查 ID:', item.projectCallData.projectId, item.callFlowId);
               const updatePromises = [
                 updateCallStatus(
-                  prevCustomersDesc.projectId,
-                  prevCustomersDesc.customerId,
+                  item.projectCallData.projectId,
+                  item.projectCallData.customerId,
                   item.projectCallData?.activeCall?.Status === 'Talking' ? 1 : 2, // 更新撥打狀態為初始值
                 ),
                 updateBonsaleProjectAutoDialExecute(
-                  prevCustomersDesc.projectId,
+                  item.projectCallData.projectId,
                   item.callFlowId,
                 ),
               ];
 
-              if (prevCustomersDesc.callStatus === 2) {
-                console.log('撥打狀態為不成功接通', prevCustomersDesc);
+              if (item.projectCallData.activeCall && item.projectCallData.activeCall.Status !== 'Talking') {
+                console.log('撥打狀態為不成功接通', item.projectCallData);
                 // 如果撥打狀態為不成功接通 要發送 API 更新 dialUpdate
                 updatePromises.push(
                   updateDialUpdate(
-                    prevCustomersDesc.projectId,
-                    prevCustomersDesc.customerId
+                    item.projectCallData.projectId,
+                    item.projectCallData.customerId
                   )
                 );
-              } else if (prevCustomersDesc.callStatus === 1) {
-                console.log('撥打狀態為成功接通', prevCustomersDesc);
+              } else if (item.projectCallData.activeCall && item.projectCallData.activeCall.Status === 'Talking') {
+                console.log('撥打狀態為成功接通', item.projectCallData);
                 // 如果撥打狀態為成功接通 要發送 API 更新 訪談紀錄
                 if (!item.projectCallData?.activeCall?.LastChangeStatus) throw new Error('LastChangeStatus is undefined'); 
                 updatePromises.push(
                   updateVisitRecord(
-                    prevCustomersDesc.projectId,
-                    prevCustomersDesc.customerId,
+                    item.projectCallData.projectId,
+                    item.projectCallData.customerId,
                     'intro',
                     'admin',
                     item.projectCallData?.activeCall?.LastChangeStatus,
@@ -537,19 +475,10 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                   console.error('Error in updating records:', error);
                 });
 
-              // 將先前的撥打狀態記錄到 projectCustomersDesc 中
-              const updatedCustomersDescFindIdex = updatedCustomersDesc.findIndex(customersDesc => {
-                return item.projectCallData && customersDesc.customerId === item.projectCallData.customerId;
-              })
-              updatedCustomersDesc[updatedCustomersDescFindIdex] = {
-                ...prevCustomersDesc,
-                callStatus: item.projectCallData?.activeCall?.Status === 'Talking' ? 1 : 2, // 更新撥打狀態為初始值
-              };
               return {
                 ...item,
                 projectCallState: 'recorded',
                 projectCallData,
-                projectCustomersDesc: updatedCustomersDesc,
                 toCall: null,
               };
             } else {
@@ -583,15 +512,6 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
       console.log('WebSocket connection closed');
     };
   }, [setProjectOutboundData, updateCallStatus, updateBonsaleProjectAutoDialExecute, updateDialUpdate, updateVisitRecord, throttleAutoOutbound]);
-
-  const [openRows, setOpenRows] = useState<Record<string, boolean>>({}); // 用於跟踪每行的展開狀態
-
-  const toggleRow = (projectId: string) => {
-    setOpenRows(prev => ({
-      ...prev,
-      [projectId]: !prev[projectId],
-    }));
-  };
 
   useEffect(() => {
     wsRef.current = new WebSocket(`${WS_HOST}/ws/projectOutbound`); // 初始化 WebSocket
@@ -659,7 +579,6 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
         <Table stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell align="center" sx={{ width: '20px' }} />
               <TableCell align='center' sx={{ width: '20px' }}>
                 啟用專案
               </TableCell>
@@ -695,7 +614,6 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                 </TableRow>
             }
             {projectOutboundData.map((item, index) => {
-              const isOpen = openRows[item.projectId] || false;
 
               return (
                 <Fragment key={item.projectId + index}>
@@ -706,11 +624,6 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                       transition: 'background-color 0.3s'
                     }}
                   >
-                    <TableCell align="center">
-                      <IconButton onClick={() => toggleRow(item.projectId)}>
-                        {isOpen ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-                      </IconButton>
-                    </TableCell>
                     <TableCell>
                       <Switch 
                         checked={item.isEnable}
@@ -805,11 +718,6 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                               'default'
                           }}
                         />
-                        <Chip
-                          label={`撥打給: ${currentCallShow(item.projectCustomersDesc, item.projectCallData?.customerId || '-')} | ${item.projectCallData?.phone || '-'}`}
-                          variant="outlined"
-                          size="small"
-                        />
                       </Stack>
                     </TableCell>
                     <TableCell align='left'>
@@ -894,18 +802,6 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                       ) : (
                         <Chip label="No Data" variant="outlined" size="small" />
                       )}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell colSpan={8} sx={{ paddingBottom: 0, paddingTop: 0 }}>
-                      <Collapse in={isOpen} timeout="auto" unmountOnExit>
-                        <Box sx={{ margin: '16px', backgroundColor: '#f5f5f5', borderRadius: '8px', padding: '16px' }}>
-                          <Typography variant="h6" gutterBottom>
-                            詳細資訊
-                          </Typography>
-                          <CustomerDetailsTable projectCustomersDesc={item.projectCustomersDesc} />
-                        </Box>
-                      </Collapse>
                     </TableCell>
                   </TableRow>
                 </Fragment>

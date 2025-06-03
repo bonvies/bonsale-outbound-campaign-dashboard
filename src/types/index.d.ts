@@ -10,7 +10,7 @@ declare global {
     endDate: Date;
     callStatus: number
     extension: string
-    projectCustomersDesc: ProjectCustomersDesc[]
+    // projectCustomersDesc: ProjectCustomersDesc[]
     projectCallState: string // 撥打狀態
     projectCallData: { // 撥打資料
       requestId: string;

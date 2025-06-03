@@ -9,10 +9,11 @@ const port = import.meta.env.VITE_API_PORT;
 const HTTP_HOST = `${api_protocol}://${hostname}:${port}`;
 
 export default function useGetBonsaleAutoDial() {
-  const getBonsaleAutoDial = useCallback(async () => {
+  const getBonsaleAutoDial = useCallback(async (page: number = 1) => {
     try {
       const queryString = new URLSearchParams({
-        limit: '-1',
+        // limit: '-1', // 暫時不使用 limit，因為會導致資料量過大
+        page: page.toString(),
         sort: 'created_at+desc'
       });
       const response = await axios.get(`${HTTP_HOST}/api/bonsale/project/auto-dial?${queryString}`);
