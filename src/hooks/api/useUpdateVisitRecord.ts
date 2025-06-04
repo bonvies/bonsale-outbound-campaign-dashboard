@@ -23,6 +23,7 @@ export default function useUpdateVisitRecord() {
       remindAt: string;
     }
   ) => {
+    // console.log('%c UpdateVisitRecord','font-size: 20px; font-weight: bold;');
     try {
       const response = await axios.post(`${HTTP_HOST}/api/bonsale/project/customer/visit`, {
         projectId,

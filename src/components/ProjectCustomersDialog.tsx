@@ -54,7 +54,7 @@ export default function ProjectCustomersDialog({ onOpen, onClose, projectId }: P
         專案名單撥打狀態
       </DialogTitle>
       <DialogContent>
-        <DialogContentText id="alert-dialog-description">
+        <DialogContentText component="div" id="alert-dialog-description">
           <CustomerDetailsTable projectCustomersDesc={projectCustomersDesc} />
         </DialogContentText>
       </DialogContent>

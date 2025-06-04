@@ -433,11 +433,14 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
               if (!item.projectCallData) return item;
               // 發送 API 請求到後端，更新撥打狀態...
               console.log('發送 API 請求到後端，更新撥打狀態... 檢查 ID:', item.projectCallData.projectId, item.callFlowId);
+
+              console.log('item.projectCallData.activeCall:', item.projectCallData.activeCall);
+              console.warn('撥打狀態:', item.projectCallData.activeCall?.Status, item.projectCallData?.activeCall?.Status === 'Talking' ? 1 : 2);
               const updatePromises = [
                 updateCallStatus(
                   item.projectCallData.projectId,
                   item.projectCallData.customerId,
-                  item.projectCallData?.activeCall?.Status === 'Talking' ? 1 : 2, // 更新撥打狀態為初始值
+                  item.projectCallData?.activeCall?.Status === 'Talking' ? 1 : 2, // 判斷撥打狀態是否為成功接通
                 ),
                 updateBonsaleProjectAutoDialExecute(
                   item.projectCallData.projectId,
@@ -458,28 +461,64 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                 console.log('撥打狀態為成功接通', item.projectCallData);
                 // 如果撥打狀態為成功接通 要發送 API 更新 訪談紀錄
                 if (!item.projectCallData?.activeCall?.LastChangeStatus) throw new Error('LastChangeStatus is undefined'); 
+                
+                /*
+                  這是因為後端在 updateCallStatus 也會抓訪談紀錄 這時如果我太快 updateVisitRecord
+                  VisitRecord 會抓到舊的 CallStatus 導致 CallStatus 還是會被寫入 0
+                  所以才需要我這邊  延遲更新訪談紀錄
+                */
+
+                // 定義一個延遲更新訪談紀錄的函數
+                function delayUpdateVisitRecord (ms: number, item: ProjectOutboundDataType): Promise<void> {
+                  return new Promise<void>((resolve) => {
+                    setTimeout(() => {
+                      console.log('延遲更新訪談紀錄');
+                      updateVisitRecord(
+                        item.projectCallData!.projectId,
+                        item.projectCallData!.customerId,
+                        'intro',
+                        'admin',
+                        item.projectCallData!.activeCall!.LastChangeStatus,
+                        '撥打成功',
+                        '撥打成功'
+                      );
+                      resolve();
+                    }, ms);
+                  });
+                }
+                
                 updatePromises.push(
-                  updateVisitRecord(
-                    item.projectCallData.projectId,
-                    item.projectCallData.customerId,
-                    'intro',
-                    'admin',
-                    item.projectCallData?.activeCall?.LastChangeStatus,
-                    '撥打成功',
-                    '撥打成功'
-                  )
+                  delayUpdateVisitRecord(100, item) // 延遲 100 毫秒更新訪談紀錄
+                  // updateVisitRecord(
+                  //   item.projectCallData.projectId,
+                  //   item.projectCallData.customerId,
+                  //   'intro',
+                  //   'admin',
+                  //   item.projectCallData?.activeCall?.LastChangeStatus,
+                  //   '撥打成功',
+                  //   '撥打成功'
+                  // )
                 );
               }
 
               // 等待所有的 API 請求完成
-              Promise.all(updatePromises)
-                .then(() => {
-                  // 所有的 通話記錄 API 請求完成
-                  console.log('%c 所有的 通話記錄 API 請求完成','color: green');
-                })
-                .catch(error => {
-                  console.error('Error in updating records:', error);
-                });
+
+              // 逐行（依序）執行
+              (async () => {
+                for (const promise of updatePromises) {
+                  await promise; // 一個一個來
+                }
+              })();
+              
+              // 並行（同時）執行
+              // Promise.all(updatePromises)
+              //   .then(() => {
+              //     // 所有的 通話記錄 API 請求完成
+              //     console.log('%c 所有的 通話記錄 API 請求完成','color: green');
+              //   })
+              //   .catch(error => {
+              //     console.error('Error in updating records:', error);
+              //   });
 
               return {
                 ...item,
@@ -496,7 +535,6 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
               // 所以這邊要加一個隨機延遲的時間 讓他們有機會平均分散撥打
               const randomDelayTime = Math.round(Math.random() * 200); // 隨機延遲時間 0~200 毫秒
               setTimeout(() => {
-
                 throttleAutoOutbound(item, item.appId, item.appSecret);
               }, randomDelayTime);
               
