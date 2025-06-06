@@ -48,6 +48,11 @@ const port = import.meta.env.VITE_API_PORT;
 const ws_protocol = import.meta.env.VITE_WS_PROTOCOL;
 const WS_HOST = `${ws_protocol}://${hostname}:${port}`;
 
+type PreDialFoolProofing = {
+  projectId: string
+  customerId: string
+}
+
 export default function Home() {
   // 引入 自定義 API Hook
   const { updateCallStatus } = useUpdateCallStatus();
@@ -139,6 +144,7 @@ export default function Home() {
     }
   };
 
+  // 撥打電話核心流程
   const autoOutbound = useCallback(async (project: ProjectOutboundDataType, appId: string, appSecret: string) => {
     // 如果是執行失敗的話 改變狀態就好 讓程序再次嘗試撥打 
     if ( project?.callStatus === 3 ) {
@@ -179,6 +185,32 @@ export default function Home() {
           console.log('phone:', phone, 'cleanPhone:', cleanPhone);
           console.log('projectId:', projectId);
           console.log('customerId:', customerId);
+
+
+          // 撥號之前先 更新 preDialFoolProofing 狀態 紀錄以便防呆
+          setPreDialFoolProofing(prev => {
+            // 檢查這個 projectId 是否已經存在於狀態陣列中
+            const exists = prev.some(
+              (entry) =>
+                entry.projectId === projectId
+            );
+            return exists
+              // 如果已存在，更新對應的 customerId
+              ? prev.map(entry =>
+                  entry.projectId === projectId
+                    ? { ...entry, customerId: customerId }
+                    : entry
+                )
+              // 如果不存在，新增一筆資料
+              : [
+                  ...prev,
+                  {
+                    projectId: projectId,
+                    customerId: customerId,
+                  },
+                ];
+          });
+
           const toCall: ToCallResponse = await activeOutbound(projectId, customerId, cleanPhone, appId, appSecret);
   
           // 撥打電話的時候 會回傳 一個 callid 我們可以利用這個 callid 來查詢當前的撥打狀態
@@ -205,7 +237,32 @@ export default function Home() {
           if (secondOutboundData.length > 0) {
             // 如果有資料 就撥打電話
             const { phone } = secondOutboundData[0].customer; 
-            const { projectId, customerId } = secondOutboundData[0]; 
+            const { projectId, customerId } = secondOutboundData[0];
+
+            // 撥號之前先 更新 preDialFoolProofing 狀態 紀錄以便防呆
+            setPreDialFoolProofing(prev => {
+              // 檢查這個 projectId 是否已經存在於狀態陣列中
+              const exists = prev.some(
+                (entry) =>
+                  entry.projectId === projectId
+              );
+              return exists
+                // 如果已存在，更新對應的 customerId
+                ? prev.map(entry =>
+                    entry.projectId === projectId
+                      ? { ...entry, customerId: customerId }
+                      : entry
+                  )
+                // 如果不存在，新增一筆資料
+                : [
+                    ...prev,
+                    {
+                      projectId: projectId,
+                      customerId: customerId,
+                    },
+                  ];
+            });
+
             const toCall: ToCallResponse = await activeOutbound(projectId, customerId, phone, appId, appSecret);
             console.log('currentCall:', toCall);
             // 撥打電話的時候 會回傳 一個 callid 我們可以利用這個 callid 來查詢當前的撥打狀態
@@ -276,119 +333,120 @@ export default function Home() {
   };
 
   // 建立 WebSocket 連線 Bonsale WebHook
-const connectBonsaleWebHookWebSocket = useCallback(() => {
-  if (!wsBonsaleWebHookRef.current) {
-    return console.error('Bonsale WebHook WebSocket is not initialized');
-  }
-
-  wsBonsaleWebHookRef.current.onopen = () => {
-    console.log('Bonsale WebHook WebSocket connection established');
-  };
-
-  wsBonsaleWebHookRef.current.onmessage = async (event) => {
-    const message: BonsaleWebHook = JSON.parse(event.data);
-
-    switch (message.type) {
-      case 'auto-dial.created': {
-        console.log('%c Received auto-dial.created message', 'font-size:16px; font-weight:bold', message);
-        const { projectId, callFlowId } = message.body;
-
-        // 取得單一專案外撥資料並新增
-        const newBonsaleAutoDial = await getOneBonsaleAutoDial(projectId, callFlowId);
-
-        console.log('newBonsaleAutoDial:', newBonsaleAutoDial);
-        setProjectOutboundData(prevProjectOutboundData => {
-          return [
-            {
-              appId: newBonsaleAutoDial.appId,
-              appSecret: newBonsaleAutoDial.appSecret,
-              callFlowId: newBonsaleAutoDial.callFlowId,
-              projectId: newBonsaleAutoDial.projectId,
-              projectName: newBonsaleAutoDial.projectInfo.projectName,
-              startDate: newBonsaleAutoDial.projectInfo.startDate,
-              endDate: newBonsaleAutoDial.projectInfo.endDate,
-              callStatus: 0,
-              extension: newBonsaleAutoDial.callFlow.phone,
-              projectCallState: 'init',
-              projectCallData: null, // 保持原有的撥打資料,
-              isEnable: newBonsaleAutoDial.projectInfo.isEnable,
-              toCall: null,
-            } as ProjectOutboundDataType,
-            ...prevProjectOutboundData
-          ]
-        });
-        break;
-      }
-      case 'auto-dial.updated': {
-        console.log('%c Received auto-dial.updated message', 'font-size:16px; font-weight:bold', message);
-
-        const { projectId, callFlowId } = message.body;
-
-        // 取得單一專案外撥資料並更新
-        const oneBonsaleAutoDial = await getOneBonsaleAutoDial(projectId, callFlowId);
-
-        setProjectOutboundData(prevProjectOutboundData => {
-          return prevProjectOutboundData.map((item) => {
-            if (item.projectId === projectId) {
-              // 更新專案狀態，補上 toCall 屬性
-              return {
-                appId: oneBonsaleAutoDial.appId,
-                appSecret: oneBonsaleAutoDial.appSecret,
-                callFlowId: oneBonsaleAutoDial.callFlowId,
-                projectId: oneBonsaleAutoDial.projectId,
-                projectName: oneBonsaleAutoDial.projectInfo.projectName,
-                startDate: oneBonsaleAutoDial.projectInfo.startDate,
-                endDate: oneBonsaleAutoDial.projectInfo.endDate,
-                callStatus: item.callStatus, // 保持原有的 callStatus
-                extension: oneBonsaleAutoDial.callFlow.phone,
-                projectCallState: item.projectCallState, // 保持原有的撥打狀態
-                projectCallData: item.projectCallData, // 保持原有的撥打資料,
-                isEnable: oneBonsaleAutoDial.projectInfo.isEnable,
-                toCall: item.toCall ?? null, // 保持原有的 toCall，或設為 null
-              };
-            }
-            return item;
-          });
-        });
-
-        break;
-      }
-      case 'project.updated': {
-        console.log('%c Received project.updated message', 'font-size:16px; font-weight:bold', message);
-        const { Id: projectId, isEnable } = message.body;
-
-        setProjectOutboundData(prevProjectOutboundData => {
-          return prevProjectOutboundData.map((item) => {
-            if (item.projectId === projectId) {
-              // 更新專案狀態
-              return {
-                ...item,
-                isEnable: isEnable
-              };
-            }
-            return item;
-          });
-        });
-        
-        break;
-      }
-      default: {
-        console.warn('Unknown message type:', message);
-        return;
-      }
+  const connectBonsaleWebHookWebSocket = useCallback(() => {
+    if (!wsBonsaleWebHookRef.current) {
+      return console.error('Bonsale WebHook WebSocket is not initialized');
     }
-  };
 
-  wsBonsaleWebHookRef.current.onerror = (error) => {
-    console.error('Bonsale WebHook WebSocket error:', error);
-  };
+    wsBonsaleWebHookRef.current.onopen = () => {
+      console.log('Bonsale WebHook WebSocket connection established');
+    };
 
-  wsBonsaleWebHookRef.current.onclose = () => {
-    console.log('Bonsale WebHook WebSocket connection closed');
-  };
-}, [getOneBonsaleAutoDial, setProjectOutboundData]);
+    wsBonsaleWebHookRef.current.onmessage = async (event) => {
+      const message: BonsaleWebHook = JSON.parse(event.data);
+
+      switch (message.type) {
+        case 'auto-dial.created': {
+          console.log('%c Received auto-dial.created message', 'font-size:16px; font-weight:bold', message);
+          const { projectId, callFlowId } = message.body;
+
+          // 取得單一專案外撥資料並新增
+          const newBonsaleAutoDial = await getOneBonsaleAutoDial(projectId, callFlowId);
+
+          console.log('newBonsaleAutoDial:', newBonsaleAutoDial);
+          setProjectOutboundData(prevProjectOutboundData => {
+            return [
+              {
+                appId: newBonsaleAutoDial.appId,
+                appSecret: newBonsaleAutoDial.appSecret,
+                callFlowId: newBonsaleAutoDial.callFlowId,
+                projectId: newBonsaleAutoDial.projectId,
+                projectName: newBonsaleAutoDial.projectInfo.projectName,
+                startDate: newBonsaleAutoDial.projectInfo.startDate,
+                endDate: newBonsaleAutoDial.projectInfo.endDate,
+                callStatus: 0,
+                extension: newBonsaleAutoDial.callFlow.phone,
+                projectCallState: 'init',
+                projectCallData: null, // 保持原有的撥打資料,
+                isEnable: newBonsaleAutoDial.projectInfo.isEnable,
+                toCall: null,
+              } as ProjectOutboundDataType,
+              ...prevProjectOutboundData
+            ]
+          });
+          break;
+        }
+        case 'auto-dial.updated': {
+          console.log('%c Received auto-dial.updated message', 'font-size:16px; font-weight:bold', message);
+
+          const { projectId, callFlowId } = message.body;
+
+          // 取得單一專案外撥資料並更新
+          const oneBonsaleAutoDial = await getOneBonsaleAutoDial(projectId, callFlowId);
+
+          setProjectOutboundData(prevProjectOutboundData => {
+            return prevProjectOutboundData.map((item) => {
+              if (item.projectId === projectId) {
+                // 更新專案狀態，補上 toCall 屬性
+                return {
+                  appId: oneBonsaleAutoDial.appId,
+                  appSecret: oneBonsaleAutoDial.appSecret,
+                  callFlowId: oneBonsaleAutoDial.callFlowId,
+                  projectId: oneBonsaleAutoDial.projectId,
+                  projectName: oneBonsaleAutoDial.projectInfo.projectName,
+                  startDate: oneBonsaleAutoDial.projectInfo.startDate,
+                  endDate: oneBonsaleAutoDial.projectInfo.endDate,
+                  callStatus: item.callStatus, // 保持原有的 callStatus
+                  extension: oneBonsaleAutoDial.callFlow.phone,
+                  projectCallState: item.projectCallState, // 保持原有的撥打狀態
+                  projectCallData: item.projectCallData, // 保持原有的撥打資料,
+                  isEnable: oneBonsaleAutoDial.projectInfo.isEnable,
+                  toCall: item.toCall ?? null, // 保持原有的 toCall，或設為 null
+                };
+              }
+              return item;
+            });
+          });
+
+          break;
+        }
+        case 'project.updated': {
+          console.log('%c Received project.updated message', 'font-size:16px; font-weight:bold', message);
+          const { Id: projectId, isEnable } = message.body;
+
+          setProjectOutboundData(prevProjectOutboundData => {
+            return prevProjectOutboundData.map((item) => {
+              if (item.projectId === projectId) {
+                // 更新專案狀態
+                return {
+                  ...item,
+                  isEnable: isEnable
+                };
+              }
+              return item;
+            });
+          });
+          
+          break;
+        }
+        default: {
+          console.warn('Unknown message type:', message);
+          return;
+        }
+      }
+    };
+
+    wsBonsaleWebHookRef.current.onerror = (error) => {
+      console.error('Bonsale WebHook WebSocket error:', error);
+    };
+
+    wsBonsaleWebHookRef.current.onclose = () => {
+      console.log('Bonsale WebHook WebSocket connection closed');
+    };
+  }, [getOneBonsaleAutoDial, setProjectOutboundData]);
 
   // 建立 WebSocket 連線
+  const [preDialFoolProofing, setPreDialFoolProofing] = useState<PreDialFoolProofing[]>([]); // 防呆機制 用於防止重複撥打電話的引用
   const connectWebSocket = useCallback(() => {
     if (!wsRef.current) {
       return console.error('WebSocket is not initialized');
@@ -414,7 +472,7 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
             if (item.callStatus === 0) return item; // 如果專案狀態為未執行，則不處理
 
             // 尋找當前專案的撥打資料
-            const projectCallData = message.find((call: Call) => {
+            const projectCallData= message.find((call: Call) => {
               return call.projectId === item.projectId;
             });
             // console.log('當前專案的撥打資料:', projectCallData);
@@ -422,6 +480,7 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
             // 更新專案狀態
             if (projectCallData) {
               console.log('有撥打資料:', projectCallData);
+              
               // 如果有撥打資料 則更新專案狀態為撥打中
               return {
                 ...item,
@@ -527,8 +586,63 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                 toCall: null,
               };
             } else {
-              console.log('%c 找不到之前的撥打資料','color: yellow');
+              console.log('%c 找不到之前的 projectCallData 撥打資料','color: yellow');
               // 找不到之前的撥打資料 代表說 有可能進入到 secondOutbound 去播撥打失敗的人
+
+              // 這時候要重新撥打電話
+              // 撥打電話錢 先抓名單來比對防呆
+              if (item.callStatus === 1) {
+                (async () => {
+                  let fetchOutboundDataResult: { projectId: string; customerId: string } = { projectId: '', customerId: '' };
+                  // 使用 fetchOutboundData 取得 callStatus: 0 的資料
+                  const firstOutboundData = await fetchOutboundData({
+                    callFlowIdOutbound: item.callFlowId,
+                    projectIdOutbound: item.projectId,
+                    limit: '1',
+                    callStatus: '0',
+                  });
+                  
+                  if (firstOutboundData.length > 0 && firstOutboundData[0]) {
+                    fetchOutboundDataResult = { projectId: firstOutboundData[0].projectId || '', customerId: firstOutboundData[0].customerId || '' };
+                  } else {
+                    // 如果沒有資料 就取得 callStatus: 2 的資料
+                    const secondOutboundData = await fetchOutboundData({
+                      callFlowIdOutbound: item.callFlowId,
+                      projectIdOutbound: item.projectId,
+                      limit: '1',
+                      callStatus: '2',
+                    });
+                    if (secondOutboundData.length > 0 && secondOutboundData[0]) {
+                      fetchOutboundDataResult = { projectId: secondOutboundData[0].projectId || '', customerId: secondOutboundData[0].customerId || '' };
+                    }
+                  }
+                  console.log(`%c fetchOutboundDataResult`,'color: pink')
+                  console.log(firstOutboundData);
+                  const preDial = preDialFoolProofing.find(
+                    entry => entry.projectId === item.projectId
+                  );
+
+                  if (preDial?.projectId === fetchOutboundDataResult.projectId && preDial?.customerId === fetchOutboundDataResult.customerId) {
+                    // 如果已經有撥打過了 就不再撥打
+                    console.warn(`%c 防呆機制: 已經撥打過專案 ${item.projectId} 的客戶 ${preDial.customerId}，不再重複撥打。`, 'color: orange; font-size: 16px;');
+
+                    // 寫入通話狀態為 2 (撥打失敗)
+                    (async () => {
+                      await updateCallStatus(
+                        preDial.projectId,
+                        preDial.customerId,
+                        2
+                      );
+                      await updateDialUpdate(
+                        preDial.projectId,
+                        preDial.customerId,
+                      )
+                    })();
+                    return item; // 返回原始項目，不進行任何更新
+                  }
+                })();
+              }
+
 
               // 因為 throttleAutoOutbound 有節流器的關係 所以會導致只有最前面的幾個專案先撥打
               // 其他的專案會因節流器的關係 一直沒有撥打到
@@ -555,7 +669,7 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
     wsRef.current.onclose = () => {
       console.log('WebSocket connection closed');
     };
-  }, [setProjectOutboundData, updateCallStatus, updateBonsaleProjectAutoDialExecute, updateDialUpdate, updateVisitRecord, throttleAutoOutbound]);
+  }, [setProjectOutboundData, updateCallStatus, updateBonsaleProjectAutoDialExecute, updateDialUpdate, updateVisitRecord, fetchOutboundData, preDialFoolProofing, throttleAutoOutbound]);
 
   useEffect(() => {
     wsRef.current = new WebSocket(`${WS_HOST}/ws/projectOutbound`); // 初始化 WebSocket
