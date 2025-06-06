@@ -172,7 +172,11 @@ export default function Home() {
           const { projectId, customerId } = firstOutboundData[0]; 
 
           // 處理 phone 格式，移除非數字字元
-          const cleanPhone = phone.replace(/\D/g, '');
+          let cleanPhone = phone.replace(/\D/g, '');
+          // 如果電話號碼長度為 9 且開頭不是 0，則在前面加上 0
+          if (cleanPhone.length === 9 && !cleanPhone.startsWith('0')) {
+            cleanPhone = '0' + cleanPhone;
+          }
 
           // TODO: 日後可能要再增加過濾條件 電話有可能會有 +886 886 886-886 886886886 等等格式
 
