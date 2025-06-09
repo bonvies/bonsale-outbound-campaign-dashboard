@@ -235,7 +235,7 @@ export default function Home() {
     }
   },[activeOutbound, fetchOutboundData, setProjectOutboundData]);
 
-  const throttleAutoOutbound = useThrottle(autoOutbound, 500); // 使用 throttle 限制每 500 豪秒最多執行一次
+  const throttleAutoOutbound = useThrottle(autoOutbound, 50); // 使用 throttle 限制每 500 豪秒最多執行一次
 
   const handleStartOutbound = (projectId: string) => {
     startOutbound(projectId);
