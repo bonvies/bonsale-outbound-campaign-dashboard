@@ -8,23 +8,22 @@ const api_protocol = import.meta.env.VITE_API_PROTOCOL;
 const port = import.meta.env.VITE_API_PORT;
 const HTTP_HOST = `${api_protocol}://${hostname}:${port}`;
 
-export default function usePostOutbound() {
-  const postOutbound = useCallback(async (
-    projectId: string,
+export default function usePutOutbound() {
+  const putOutbound = useCallback(async (
+    grant_type: string,
+    client_id: string,
+    client_secret: string,
     callFlowId: string,
-    appId: string,
-    appSecret: string,
-    action: 'active' | 'active' | 'start' | 'stop' | 'pause' | 'calling' | 'waiting' | 'recording',
+    projectId: string,
   ): Promise<ToCallResponse> => {
     try {
       // 發送撥打電話的請求
-      const result = await axios.post(`${HTTP_HOST}/api/projectOutbound`, {
-        grant_type: "client_credentials",
-        client_id: appId,
-        client_secret: appSecret,
+      const result = await axios.put(`${HTTP_HOST}/api/projectOutbound/${projectId}`, {
+        grant_type,
+        client_id,
+        client_secret,
         callFlowId,
-        projectId,
-        action,
+        projectId
       });
       return result.data as ToCallResponse;
     } catch (error) {
@@ -33,5 +32,5 @@ export default function usePostOutbound() {
     }
   }, []);
 
-  return { postOutbound };
+  return { putOutbound };
 }

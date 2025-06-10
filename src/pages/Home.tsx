@@ -20,6 +20,7 @@ import {
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
+import StopIcon from '@mui/icons-material/Stop';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 
 import InfoOutlineIcon from '@mui/icons-material/InfoOutline';
@@ -29,10 +30,11 @@ import ProjectCustomersDialog from '../components/ProjectCustomersDialog';
 
 import useProjectOutboundData from '../hooks/useProjectOutboundData';
 import usePostOutbound from '../hooks/api/usePostOutbound';
+import usePatchOutbound from '../hooks/api/usePatchOutbound';
+import usePutOutbound from '../hooks/api/usePutOutbound';
 import useUpdateProject from '../hooks/api/useUpdateProject';
 
 import useGetOneBonsaleAutoDial from '../hooks/api/useGetOneBonsaleAutoDial';
-import useHangup3cx from '../hooks/api/useHangup3cx';
 
 // 取得本機 IP domain
 const { hostname } = window.location;
@@ -44,10 +46,11 @@ const WS_HOST = `${ws_protocol}://${hostname}:${port}`;
 export default function Home() {
   // 引入 自定義 API Hook
   const { postOutbound } = usePostOutbound();
+  const { patchOutbound } = usePatchOutbound();
+  const { putOutbound } = usePutOutbound();
   const { updateProject } = useUpdateProject();
 
   const { getOneBonsaleAutoDial } = useGetOneBonsaleAutoDial();
-  const { Hangup3cx } = useHangup3cx();
 
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null); // 用於跟踪當前展開的專案 ID
 
@@ -67,60 +70,22 @@ export default function Home() {
   const { projectOutboundData, setProjectOutboundData } = useProjectOutboundData();
 
   // 開始撥打電話
-  const startOutbound = async (projectId: string, callFlowId: string, appId: string, appSecret: string, action: string) => {
+  const startOutbound = async (projectId: string, callFlowId: string, appId: string, appSecret: string, action: 'active' | 'active' | 'start' | 'stop' | 'pause' | 'calling' | 'waiting' | 'recording') => {
     await postOutbound(projectId, callFlowId, appId, appSecret, action);
   };
 
   // 暫停撥打電話
   const pauseOutbound = async (projectId: string) => {
-    const project = projectOutboundData.find(item => item.projectId === projectId);
-    if (project) {
-      // 掛斷當前電話
-      const { toCall } = project;
-      if (toCall) {
-        const mackCallId = toCall.currentCall?.result?.id;
-        const dnnumber = toCall.currentCall?.result?.dn;
-        const token_3cx = toCall.token_3cx;
-        if (!dnnumber || !mackCallId || !token_3cx) {
-          console.error('dnnumber 或 mackCallId 或 token_3cx 為空值');
-          return;
-        }
-        if (project.projectCallData?.activeCall?.Status !== 'Talking') { 
-          // 目前暫停同時也會發送掛斷電話請求, 3cx 會因為 的狀態為 agents 而限制掛斷功能 ( 回傳 403 ) 
-          await Hangup3cx(dnnumber, mackCallId, token_3cx);
-          console.log('%c 掛斷電話','color: red');
-          // 更新專案狀態為暫停
-          setProjectOutboundData(prev =>
-            prev.map(item =>
-              item.projectId === projectId ? { ...item, callStatus: 4, projectCallState: 'hangup' } : item
-            )
-          );
-        } else {
-          // 調用 snackbar
-          snackbarRef.current?.showSnackbar('因有通話進行 所以暫停無法掛斷電話', 'warning');
-          console.log('%c 因有通話進行 所以暫停無法掛斷電話','color: red');
-          // 更新專案狀態為暫停
-          setProjectOutboundData(prev =>
-            prev.map(item =>
-              item.projectId === projectId ? { ...item, callStatus: 4 } : item
-            )
-          );
-        }
+    await patchOutbound(projectId, 'pause');
+  };
 
-        return;
-      } 
-      
-      // 更新專案狀態為暫停
-      setProjectOutboundData(prev =>
-        prev.map(item =>
-          item.projectId === projectId ? { ...item, callStatus: 4 } : item
-        )
-      );
-    }
+  // 停止撥打電話
+  const stopOutbound = async (projectId: string) => {
+    await patchOutbound(projectId, 'stop');
   };
 
   const handleStartOutbound = (project: ProjectOutboundDataType) => {
-    if (project) {
+    if (project.callStatus === 0) {
       startOutbound(
         project.projectId,
         project.callFlowId,
@@ -128,11 +93,22 @@ export default function Home() {
         project.appSecret,
         'active'
       );
+    } else if (project.callStatus === 4) {
+      patchOutbound(
+        project.projectId,
+        'start'
+      );
+    } else {
+      throw new Error('handleStartOutbound - Invalid project call status');
     }
   };
 
   const handlePauseOutbound = (projectId: string) => {
     pauseOutbound(projectId);
+  };
+
+  const handleStopOutbound = (projectId: string) => {
+    stopOutbound(projectId);
   };
 
   const handleAllProjectStartOutbound = async () => {
@@ -303,12 +279,17 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
             // 更新專案狀態
             return {
               ...item,
-              callStatus: 1,
+              callStatus: findProject.action === 'pause' || findProject.action === 'paused' ? 4 : 1,
               projectCallState: findProject.action,
               projectCallData: findProject.projectCallData // 保持原有的撥打資料
             };
           }
-          return item;
+          return {
+            ...item,
+            callStatus: 0, // 如果沒有找到對應的專案，則重置狀態
+            projectCallState: 'init',
+            projectCallData: null // 重置撥打資料
+          };
         });
       });
     };
@@ -320,7 +301,7 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
     wsRef.current.onclose = () => {
       console.log('WebSocket connection closed');
     };
-  }, []);
+  }, [setProjectOutboundData]);
 
   useEffect(() => {
     wsRef.current = new WebSocket(`${WS_HOST}/ws/projectOutbound`); // 初始化 WebSocket
@@ -492,6 +473,12 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                               </IconButton> 
                           }
                           <IconButton 
+                            onClick={() => handleStopOutbound(item.projectId)}
+                            disabled={item.callStatus === 0}
+                          >
+                            <StopIcon /> 
+                          </IconButton> 
+                          <IconButton 
                             onClick={() => handleExpandClick(true, item.projectId)}
                           >
                             <InfoOutlineIcon /> 
@@ -506,6 +493,8 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                             item.projectCallState === 'init' ? '準備撥打' :
                             item.projectCallState === 'active' ? '準備撥打' : 
                             item.projectCallState === 'start' ? '開始撥號' :
+                            item.projectCallState === 'pause' || item.projectCallState === 'paused' ? '暫停撥打' :
+                            item.projectCallState === 'stop' ? '停止撥打' :
                             item.projectCallState === 'waiting' ? '等待撥打' : 
                             item.projectCallState === 'recording' ? '撥打記錄' :
                             item.projectCallState === 'calling' ? '撥打中' : 

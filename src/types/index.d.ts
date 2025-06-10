@@ -333,7 +333,7 @@ declare global {
 
   interface ProjectOutboundWsMessage {
     projectId: string,
-    action: string,
+    action: 'active' | 'active' | 'start' | 'stop' | 'pause' | 'paused' | 'calling' | 'waiting' | 'recording',
     callFlowId: string,
     projectCallData: {
       id: string;
