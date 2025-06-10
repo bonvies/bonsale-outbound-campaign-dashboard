@@ -12,10 +12,10 @@ declare global {
     extension: string
     // projectCustomersDesc: ProjectCustomersDesc[]
     projectCallState: string // 撥打狀態
-    projectCallData: { // 撥打資料
-      requestId: string;
+    projectCallData: {
+      id: string;
       phone: string;
-      customerId: string;
+      callFlowId: string;
       projectId: string;
       activeCall?: {
         Id: number;
@@ -26,7 +26,7 @@ declare global {
         EstablishedAt: string;
         ServerNow: string;
       };
-    } | null // 撥打資料
+    } | null,
     toCall: {
       message: string;
       token_3cx: string;
@@ -329,33 +329,29 @@ declare global {
   };
   interface ToCallResponse {
     message: string;
-    token_3cx: string;
-    currentCall: {
-      finalstatus: string;
-      reason: string;
-      result: {
-        id: number;
-        status: string;
-        dn: string;
-        party_caller_name: string;
-        party_dn: string;
-        party_caller_id: string;
-        party_did: string;
-        device_id: string;
-        party_dn_type: string;
-        direct_control: boolean;
-        originated_by_dn: string;
-        originated_by_type: string;
-        referred_by_dn: string;
-        referred_by_type: string;
-        on_behalf_of_dn: string;
-        on_behalf_of_type: string;
-        callid: number;
-        legid: number;
+  };
+
+  interface ProjectOutboundWsMessage {
+    projectId: string,
+    action: string,
+    callFlowId: string,
+    projectCallData: {
+      id: string;
+      phone: string;
+      callFlowId: string;
+      projectId: string;
+      activeCall?: {
+        Id: number;
+        Caller: string;
+        Callee: string;
+        Status: string;
+        LastChangeStatus: string;
+        EstablishedAt: string;
+        ServerNow: string;
       };
-      reasontext: string;
-    };
+    } | null,
   }
+
   interface Call {
     requestId: string;
     phone: string;

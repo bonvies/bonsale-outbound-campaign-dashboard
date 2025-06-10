@@ -28,18 +28,11 @@ import GlobalSnackbar, { GlobalSnackbarRef } from '../components/GlobalSnackbar'
 import ProjectCustomersDialog from '../components/ProjectCustomersDialog';
 
 import useProjectOutboundData from '../hooks/useProjectOutboundData';
-import useUpdateCallStatus from '../hooks/api/useUpdateCallStatus';
-import useUpdateDialUpdate from '../hooks/api/useUpdateDialUpdate';
-import useUpdateVisitRecord from '../hooks/api/useUpdateVisitRecord';
-import useActiveOutbound from '../hooks/api/useActiveOutbound';
-import useFetchOutboundData from '../hooks/api/useFetchOutboundData';
+import usePostOutbound from '../hooks/api/usePostOutbound';
 import useUpdateProject from '../hooks/api/useUpdateProject';
-import useUpdateBonsaleProjectAutoDialExecute from '../hooks/api/useUpdateBonsaleProjectAutoDialExecute';
 
 import useGetOneBonsaleAutoDial from '../hooks/api/useGetOneBonsaleAutoDial';
 import useHangup3cx from '../hooks/api/useHangup3cx';
-
-import useThrottle from '../hooks/useThrottle';
 
 // 取得本機 IP domain
 const { hostname } = window.location;
@@ -50,13 +43,8 @@ const WS_HOST = `${ws_protocol}://${hostname}:${port}`;
 
 export default function Home() {
   // 引入 自定義 API Hook
-  const { updateCallStatus } = useUpdateCallStatus();
-  const { updateDialUpdate } = useUpdateDialUpdate();
-  const { updateVisitRecord } = useUpdateVisitRecord();
-  const { activeOutbound } = useActiveOutbound();
-  const { fetchOutboundData } = useFetchOutboundData();
+  const { postOutbound } = usePostOutbound();
   const { updateProject } = useUpdateProject();
-  const { updateBonsaleProjectAutoDialExecute } = useUpdateBonsaleProjectAutoDialExecute();
 
   const { getOneBonsaleAutoDial } = useGetOneBonsaleAutoDial();
   const { Hangup3cx } = useHangup3cx();
@@ -79,16 +67,8 @@ export default function Home() {
   const { projectOutboundData, setProjectOutboundData } = useProjectOutboundData();
 
   // 開始撥打電話
-  const startOutbound = (projectId: string) => {
-    const project = projectOutboundData.find(item => item.projectId === projectId);
-    if (project) {
-      // 更新專案狀態為執行中
-      setProjectOutboundData(prev =>
-        prev.map(item =>
-          item.projectId === projectId ? { ...item, callStatus: 1 } : item
-        )
-      );
-    }
+  const startOutbound = async (projectId: string, callFlowId: string, appId: string, appSecret: string, action: string) => {
+    await postOutbound(projectId, callFlowId, appId, appSecret, action);
   };
 
   // 暫停撥打電話
@@ -139,106 +119,16 @@ export default function Home() {
     }
   };
 
-  const autoOutbound = useCallback(async (project: ProjectOutboundDataType, appId: string, appSecret: string) => {
-    // 如果是執行失敗的話 改變狀態就好 讓程序再次嘗試撥打 
-    if ( project?.callStatus === 3 ) {
-      // 更新專案狀態為執行中
-      setProjectOutboundData(prev =>
-        prev.map(item =>
-          item.projectId === project.projectId ? { ...item, callStatus: 1 } : item
-        )
+  const handleStartOutbound = (project: ProjectOutboundDataType) => {
+    if (project) {
+      startOutbound(
+        project.projectId,
+        project.callFlowId,
+        project.appId,
+        project.appSecret,
+        'active'
       );
     }
-
-    // 如果該專案是 未執行
-    if (project?.callStatus === 0 || project?.callStatus === 1) {
-      try {
-        // 取得要撥打的資料
-        const { projectId, callFlowId } = project;
-
-        // 使用 fetchOutboundData 取得 callStatus: 0 的資料
-        const firstOutboundData = await fetchOutboundData({
-          callFlowIdOutbound: callFlowId,
-          projectIdOutbound: projectId,
-          limit: '1',
-          callStatus: '0',
-        });
- 
-        console.log(`%c firstOutboundData:${firstOutboundData}`,'color: red')
-
-        if (firstOutboundData.length > 0) {
-          // 如果有資料 就撥打電話
-          const { phone } = firstOutboundData[0].customer; 
-          const { projectId, customerId } = firstOutboundData[0]; 
-
-          // 處理 phone 格式，移除非數字字元
-          let cleanPhone = phone.replace(/\D/g, '');
-          // 如果電話號碼長度為 9 且開頭不是 0，則在前面加上 0
-          if (cleanPhone.length === 9 && !cleanPhone.startsWith('0')) {
-            cleanPhone = '0' + cleanPhone;
-          }
-
-          // TODO: 日後可能要再增加過濾條件 電話有可能會有 +886 886 886-886 886886886 等等格式
-
-          console.log('phone:', phone, 'cleanPhone:', cleanPhone);
-          console.log('projectId:', projectId);
-          console.log('customerId:', customerId);
-          const toCall: ToCallResponse = await activeOutbound(projectId, customerId, cleanPhone, appId, appSecret);
-  
-          // 撥打電話的時候 會回傳 一個 callid 我們可以利用這個 callid 來查詢當前的撥打狀態
-          const { callid } = toCall.currentCall?.result ?? {};
-    
-          // 更新專案狀態為執行中 且更新 currentCallId
-          setProjectOutboundData(prev =>
-            prev.map(item =>
-              item.projectId === project.projectId ? { ...item, callStatus: 1, currentCallIndex: 0, currentCallId: callid, toCall } : item
-            )
-          );
-  
-        } else {
-          // 如果沒有資料 就取得 callStatus: 2 的資料
-          const secondOutboundData = await fetchOutboundData({
-            callFlowIdOutbound: callFlowId,
-            projectIdOutbound: projectId,
-            limit: '1',
-            callStatus: '2',
-          });
-
-          console.log(`%c secondOutboundData:${secondOutboundData}`,'color: blue')
-
-          if (secondOutboundData.length > 0) {
-            // 如果有資料 就撥打電話
-            const { phone } = secondOutboundData[0].customer; 
-            const { projectId, customerId } = secondOutboundData[0]; 
-            const toCall: ToCallResponse = await activeOutbound(projectId, customerId, phone, appId, appSecret);
-            console.log('currentCall:', toCall);
-            // 撥打電話的時候 會回傳 一個 callid 我們可以利用這個 callid 來查詢當前的撥打狀態
-            const { callid } = toCall.currentCall?.result ?? {};
-      
-            // 更新專案狀態為執行中 且更新 currentCallId
-            setProjectOutboundData(prev =>
-              prev.map(item =>
-                item.projectId === project.projectId ? { ...item, callStatus: 1, currentCallId: callid, toCall } : item
-              )
-            );
-          }
-        } 
-     } catch (error) {
-       console.error('Error in batch outbound:', error);
-       // 更新專案狀態為執行失敗並清空 currentPhone
-       setProjectOutboundData(prev =>
-         prev.map(item =>
-           item.projectId === project.projectId ? { ...item, callStatus: 3, currentCallId: null, toCall: null } : item
-         )
-       );
-     }
-    }
-  },[activeOutbound, fetchOutboundData, setProjectOutboundData]);
-
-  const throttleAutoOutbound = useThrottle(autoOutbound, 500); // 使用 throttle 限制每 500 豪秒最多執行一次
-
-  const handleStartOutbound = (projectId: string) => {
-    startOutbound(projectId);
   };
 
   const handlePauseOutbound = (projectId: string) => {
@@ -404,151 +294,22 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
 
     wsRef.current.onmessage = (event) => {
       // websocket 會回傳一個陣列，裡面是我送出專案撥打電話的請求 每隔 3 秒 回傳他撥打活躍的狀態
-      const message = JSON.parse(event.data);
+      const message = JSON.parse(event.data) as ProjectOutboundWsMessage[];
       console.log('WebSocket message received:', message);
-
       setProjectOutboundData(prevProjectOutboundData => {
-        return prevProjectOutboundData
-          .map((item) => {
-            if (item.callStatus === 3) {
-              // 如果專案狀態是執行失敗 再讓他重回執行狀態 重新再試試看
-              return {...item, callStatus: 1};
-            }
-
-            if (item.callStatus === 0) return item; // 如果專案狀態為未執行，則不處理
-
-            // 尋找當前專案的撥打資料
-            const projectCallData = message.find((call: Call) => {
-              return call.projectId === item.projectId;
-            });
-            // console.log('當前專案的撥打資料:', projectCallData);
-
+        return prevProjectOutboundData.map((item) => {
+          const findProject = message.find((project: ProjectOutboundWsMessage) => project.projectId === item.projectId);
+          if (findProject) {
             // 更新專案狀態
-            if (projectCallData) {
-              console.log('有撥打資料:', projectCallData);
-              // 如果有撥打資料 則更新專案狀態為撥打中
-              return {
-                ...item,
-                projectCallState: 'calling',
-                projectCallData,
-              }; 
-            } else if (item.projectCallData) { // 找到之前記錄在專案的撥打資料 
-              console.log('之前的撥打資料:', item.projectCallData);
-              if (!item.projectCallData) return item;
-              // 發送 API 請求到後端，更新撥打狀態...
-              console.log('發送 API 請求到後端，更新撥打狀態... 檢查 ID:', item.projectCallData.projectId, item.callFlowId);
-
-              console.log('item.projectCallData.activeCall:', item.projectCallData.activeCall);
-              console.warn('撥打狀態:', item.projectCallData.activeCall?.Status, item.projectCallData?.activeCall?.Status === 'Talking' ? 1 : 2);
-              const updatePromises = [
-                updateCallStatus(
-                  item.projectCallData.projectId,
-                  item.projectCallData.customerId,
-                  item.projectCallData?.activeCall?.Status === 'Talking' ? 1 : 2, // 判斷撥打狀態是否為成功接通
-                ),
-                updateBonsaleProjectAutoDialExecute(
-                  item.projectCallData.projectId,
-                  item.callFlowId,
-                ),
-              ];
-
-              if (item.projectCallData.activeCall && item.projectCallData.activeCall.Status !== 'Talking') {
-                console.log('撥打狀態為不成功接通', item.projectCallData);
-                // 如果撥打狀態為不成功接通 要發送 API 更新 dialUpdate
-                updatePromises.push(
-                  updateDialUpdate(
-                    item.projectCallData.projectId,
-                    item.projectCallData.customerId
-                  )
-                );
-              } else if (item.projectCallData.activeCall && item.projectCallData.activeCall.Status === 'Talking') {
-                console.log('撥打狀態為成功接通', item.projectCallData);
-                // 如果撥打狀態為成功接通 要發送 API 更新 訪談紀錄
-                if (!item.projectCallData?.activeCall?.LastChangeStatus) throw new Error('LastChangeStatus is undefined'); 
-                
-                /*
-                  這是因為後端在 updateCallStatus 也會抓訪談紀錄 這時如果我太快 updateVisitRecord
-                  VisitRecord 會抓到舊的 CallStatus 導致 CallStatus 還是會被寫入 0
-                  所以才需要我這邊  延遲更新訪談紀錄
-                */
-
-                // 定義一個延遲更新訪談紀錄的函數
-                function delayUpdateVisitRecord (ms: number, item: ProjectOutboundDataType): Promise<void> {
-                  return new Promise<void>((resolve) => {
-                    setTimeout(() => {
-                      console.log('延遲更新訪談紀錄');
-                      updateVisitRecord(
-                        item.projectCallData!.projectId,
-                        item.projectCallData!.customerId,
-                        'intro',
-                        'admin',
-                        item.projectCallData!.activeCall!.LastChangeStatus,
-                        '撥打成功',
-                        '撥打成功'
-                      );
-                      resolve();
-                    }, ms);
-                  });
-                }
-                
-                updatePromises.push(
-                  delayUpdateVisitRecord(100, item) // 延遲 100 毫秒更新訪談紀錄
-                  // updateVisitRecord(
-                  //   item.projectCallData.projectId,
-                  //   item.projectCallData.customerId,
-                  //   'intro',
-                  //   'admin',
-                  //   item.projectCallData?.activeCall?.LastChangeStatus,
-                  //   '撥打成功',
-                  //   '撥打成功'
-                  // )
-                );
-              }
-
-              // 等待所有的 API 請求完成
-
-              // 逐行（依序）執行
-              (async () => {
-                for (const promise of updatePromises) {
-                  await promise; // 一個一個來
-                }
-              })();
-              
-              // 並行（同時）執行
-              // Promise.all(updatePromises)
-              //   .then(() => {
-              //     // 所有的 通話記錄 API 請求完成
-              //     console.log('%c 所有的 通話記錄 API 請求完成','color: green');
-              //   })
-              //   .catch(error => {
-              //     console.error('Error in updating records:', error);
-              //   });
-
-              return {
-                ...item,
-                projectCallState: 'recorded',
-                projectCallData,
-                toCall: null,
-              };
-            } else {
-              console.log('%c 找不到之前的撥打資料','color: yellow');
-              // 找不到之前的撥打資料 代表說 有可能進入到 secondOutbound 去播撥打失敗的人
-
-              // 因為 throttleAutoOutbound 有節流器的關係 所以會導致只有最前面的幾個專案先撥打
-              // 其他的專案會因節流器的關係 一直沒有撥打到
-              // 所以這邊要加一個隨機延遲的時間 讓他們有機會平均分散撥打
-              const randomDelayTime = Math.round(Math.random() * 200); // 隨機延遲時間 0~200 毫秒
-              setTimeout(() => {
-                throttleAutoOutbound(item, item.appId, item.appSecret);
-              }, randomDelayTime);
-              
-              return {
-                ...item,
-                projectCallState: 'waiting',
-                toCall: null,
-              };
-            }
-          });
+            return {
+              ...item,
+              callStatus: 1,
+              projectCallState: findProject.action,
+              projectCallData: findProject.projectCallData // 保持原有的撥打資料
+            };
+          }
+          return item;
+        });
       });
     };
 
@@ -559,7 +320,7 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
     wsRef.current.onclose = () => {
       console.log('WebSocket connection closed');
     };
-  }, [setProjectOutboundData, updateCallStatus, updateBonsaleProjectAutoDialExecute, updateDialUpdate, updateVisitRecord, throttleAutoOutbound]);
+  }, []);
 
   useEffect(() => {
     wsRef.current = new WebSocket(`${WS_HOST}/ws/projectOutbound`); // 初始化 WebSocket
@@ -712,13 +473,13 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                         <Stack direction='row'>
                           {item.callStatus === 0 || item.callStatus === 4 ? 
                             <IconButton 
-                              onClick={() => handleStartOutbound(item.projectId)}
+                              onClick={() => handleStartOutbound(item)}
                             >
                               <PlayArrowIcon />
                             </IconButton> : 
                             item.callStatus === 3 ? 
                               <IconButton 
-                                onClick={() => handleStartOutbound(item.projectId)}
+                                onClick={() => handleStartOutbound(item)}
                               >
                                 <RestartAltIcon />
                               </IconButton> : 
@@ -742,11 +503,12 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                       <Stack>
                         <Chip
                           label={`狀態: ${
-                            item.projectCallState === 'init' ? '準備撥打' : 
+                            item.projectCallState === 'init' ? '準備撥打' :
+                            item.projectCallState === 'active' ? '準備撥打' : 
+                            item.projectCallState === 'start' ? '開始撥號' :
                             item.projectCallState === 'waiting' ? '等待撥打' : 
-                            item.projectCallState === 'recorded' ? '撥打已記錄' :
+                            item.projectCallState === 'recording' ? '撥打記錄' :
                             item.projectCallState === 'calling' ? '撥打中' : 
-                            item.projectCallState === 'hangup' ? '撥打掛斷' :
                             item.projectCallState === 'finish' ? '撥打完成' : 
                             item.projectCallState
                           }`}
@@ -758,10 +520,10 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                               item.projectCallState === 'finish' 
                               ? 'white' : 'black',
                             bgcolor: (theme) => 
+                              item.projectCallState === 'active' ? theme.palette.warning.color50 :
                               item.projectCallState === 'calling' ? theme.palette.warning.main :
                               item.projectCallState === 'waiting' ? theme.palette.warning.color300 :
-                              item.projectCallState === 'recorded' ? theme.palette.success.color300 :
-                              item.projectCallState === 'hangup' ? theme.palette.warning.main :
+                              item.projectCallState === 'recording' ? theme.palette.success.color300 :
                               item.projectCallState === 'finish' ? theme.palette.success.color700 :
                               'default'
                           }}
@@ -772,25 +534,7 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                       {item.projectCallData ? (
                         <Stack>
                           <Chip
-                            label={`Request ID: ${item.projectCallData.requestId || '-'}`}
-                            variant="outlined"
-                            size="small"
-                            sx={{ marginBottom: '4px' }}
-                          />
-                          <Chip
                             label={`Phone: ${item.projectCallData.phone || '-'}`}
-                            variant="outlined"
-                            size="small"
-                            sx={{ marginBottom: '4px' }}
-                          />
-                          <Chip
-                            label={`Project ID: ${item.projectCallData.projectId || '-'}`}
-                            variant="outlined"
-                            size="small"
-                            sx={{ marginBottom: '4px' }}
-                          />
-                          <Chip
-                            label={`Customer ID: ${item.projectCallData.customerId || '-'}`}
                             variant="outlined"
                             size="small"
                             sx={{ marginBottom: '4px' }}

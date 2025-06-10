@@ -9,12 +9,12 @@ const port = import.meta.env.VITE_API_PORT;
 const HTTP_HOST = `${api_protocol}://${hostname}:${port}`;
 
 export default function useActiveOutbound() {
-  const activeOutbound = useCallback(async (
+  const postOutbound = useCallback(async (
     projectId: string,
-    customerId: string,
-    phone: string,
+    callFlowId: string,
     appId: string,
-    appSecret: string
+    appSecret: string,
+    action: string,
   ): Promise<ToCallResponse> => {
     try {
       // 發送撥打電話的請求
@@ -22,9 +22,9 @@ export default function useActiveOutbound() {
         grant_type: "client_credentials",
         client_id: appId,
         client_secret: appSecret,
-        phone,
+        callFlowId,
         projectId,
-        customerId,
+        action,
       });
       return result.data as ToCallResponse;
     } catch (error) {
@@ -33,5 +33,5 @@ export default function useActiveOutbound() {
     }
   }, []);
 
-  return { activeOutbound };
+  return { postOutbound };
 }
