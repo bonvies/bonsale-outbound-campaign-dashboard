@@ -200,6 +200,19 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
 
         setProjectOutboundData(prevProjectOutboundData => {
           return prevProjectOutboundData.map((item) => {
+            // 需要同步更新後端那邊正在進行自動外播的專案資料
+            if (item.callStatus !== 0) {
+              (async () => {
+                await putOutbound(
+                  'client_credentials',
+                  oneBonsaleAutoDial.appId,
+                  oneBonsaleAutoDial.appSecret,
+                  oneBonsaleAutoDial.callFlowId,
+                  oneBonsaleAutoDial.projectId
+                )
+              })();
+            }
+
             if (item.projectId === projectId) {
               // 更新專案狀態，補上 toCall 屬性
               return {
@@ -355,14 +368,7 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
           全部執行
         </Button> 
         <Alert severity="warning">
-          執行自動外撥專案時，請勿關閉此頁面或重新整理頁面，
-          <br />
-          否則會導致撥打中斷。
-        </Alert>
-        <Alert severity="warning">
-          自動外撥專案執行期間暫停動作時，會同步掛斷當前通話，
-          <br />
-          請警慎使用。
+          自動外撥專案執行期間暫停動作時，會同步掛斷當前通話，請警慎使用。
         </Alert>
       </Stack>
       <Box sx={{ height: '100%', maxHeight:'100%', overflowY: 'scroll' }}>
