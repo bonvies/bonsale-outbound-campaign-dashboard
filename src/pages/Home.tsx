@@ -34,6 +34,8 @@ import usePatchOutbound from '../hooks/api/usePatchOutbound';
 import usePutOutbound from '../hooks/api/usePutOutbound';
 import useUpdateProject from '../hooks/api/useUpdateProject';
 
+import { mainActionType } from '../utils/mainActionType';
+
 import useGetOneBonsaleAutoDial from '../hooks/api/useGetOneBonsaleAutoDial';
 
 // 取得本機 IP domain
@@ -182,7 +184,6 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
               projectCallState: 'init',
               projectCallData: null, // 保持原有的撥打資料,
               isEnable: newBonsaleAutoDial.projectInfo.isEnable,
-              toCall: null,
             } as ProjectOutboundDataType,
             ...prevProjectOutboundData
           ]
@@ -214,7 +215,6 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                 projectCallState: item.projectCallState, // 保持原有的撥打狀態
                 projectCallData: item.projectCallData, // 保持原有的撥打資料,
                 isEnable: oneBonsaleAutoDial.projectInfo.isEnable,
-                toCall: item.toCall ?? null, // 保持原有的 toCall，或設為 null
               };
             }
             return item;
@@ -279,7 +279,7 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
             // 更新專案狀態
             return {
               ...item,
-              callStatus: findProject.action === 'pause' || findProject.action === 'paused' ? 4 : 1,
+              callStatus: mainActionType(findProject.action) === 'error' ? 3 : mainActionType(findProject.action) === 'pause' ? 4 : 1,
               projectCallState: findProject.action,
               projectCallData: findProject.projectCallData // 保持原有的撥打資料
             };
@@ -490,30 +490,32 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
                       <Stack>
                         <Chip
                           label={`狀態: ${
-                            item.projectCallState === 'init' ? '準備撥打' :
-                            item.projectCallState === 'active' ? '準備撥打' : 
-                            item.projectCallState === 'start' ? '開始撥號' :
-                            item.projectCallState === 'pause' || item.projectCallState === 'paused' ? '暫停撥打' :
-                            item.projectCallState === 'stop' ? '停止撥打' :
-                            item.projectCallState === 'waiting' ? '等待撥打' : 
-                            item.projectCallState === 'recording' ? '撥打記錄' :
-                            item.projectCallState === 'calling' ? '撥打中' : 
-                            item.projectCallState === 'finish' ? '撥打完成' : 
-                            item.projectCallState
+                            mainActionType(item.projectCallState) === 'init' ? '準備撥打' :
+                            mainActionType(item.projectCallState) === 'active' ? '準備撥打' : 
+                            mainActionType(item.projectCallState) === 'start' ? '開始撥號' :
+                            mainActionType(item.projectCallState) === 'pause' ? '暫停撥打' :
+                            mainActionType(item.projectCallState) === 'stop' ? '停止撥打' :
+                            mainActionType(item.projectCallState) === 'waiting' ? '等待撥打' : 
+                            mainActionType(item.projectCallState) === 'error' ? '撥打錯誤' :
+                            mainActionType(item.projectCallState) === 'recording' ? '撥打記錄' :
+                            mainActionType(item.projectCallState) === 'calling' ? '撥打中' : 
+                            mainActionType(item.projectCallState) === 'finish' ? '撥打完成' : 
+                            mainActionType(item.projectCallState)
                           }`}
                           size="small"
                           sx={{ 
                             marginBottom: '4px',
                             color: () => 
-                              item.projectCallState === 'calling' || 
-                              item.projectCallState === 'finish' 
+                              mainActionType(item.projectCallState) === 'calling' || 
+                              mainActionType(item.projectCallState) === 'finish' 
                               ? 'white' : 'black',
                             bgcolor: (theme) => 
-                              item.projectCallState === 'active' ? theme.palette.warning.color50 :
-                              item.projectCallState === 'calling' ? theme.palette.warning.main :
-                              item.projectCallState === 'waiting' ? theme.palette.warning.color300 :
-                              item.projectCallState === 'recording' ? theme.palette.success.color300 :
-                              item.projectCallState === 'finish' ? theme.palette.success.color700 :
+                              mainActionType(item.projectCallState) === 'active' ? theme.palette.warning.color50 :
+                              mainActionType(item.projectCallState) === 'calling' ? theme.palette.warning.main :
+                              mainActionType(item.projectCallState) === 'waiting' ? theme.palette.warning.color300 :
+                              mainActionType(item.projectCallState) === 'error' ? theme.palette.error.main :
+                              mainActionType(item.projectCallState) === 'recording' ? theme.palette.success.color300 :
+                              mainActionType(item.projectCallState) === 'finish' ? theme.palette.success.color700 :
                               'default'
                           }}
                         />

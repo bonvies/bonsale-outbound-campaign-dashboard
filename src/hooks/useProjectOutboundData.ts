@@ -37,7 +37,7 @@ const useProjectOutboundData = () => {
             projectCallState: 'init',
             projectCallData: null,
             isEnable: item.projectInfo.isEnable,
-            toCall: null,
+            errorTimes: 0,
           };
         })
       );
