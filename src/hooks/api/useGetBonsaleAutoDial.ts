@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 // 取得本機 IP domain
 const { hostname } = window.location;
@@ -9,7 +9,10 @@ const port = import.meta.env.VITE_API_PORT;
 const HTTP_HOST = `${api_protocol}://${hostname}:${port}`;
 
 export default function useGetBonsaleAutoDial() {
+  const [isLoading, setIsLoading] = useState(false);
+
   const getBonsaleAutoDial = useCallback(async (page: number = 1) => {
+    setIsLoading(true);
     try {
       const queryString = new URLSearchParams({
         // limit: '-1', // 暫時不使用 limit，因為會導致資料量過大
@@ -21,8 +24,10 @@ export default function useGetBonsaleAutoDial() {
     } catch (error) {
       console.error('Error updating call status:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  return { getBonsaleAutoDial };
+  return { getBonsaleAutoDial, isLoading };
 }

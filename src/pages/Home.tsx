@@ -69,7 +69,7 @@ export default function Home() {
 
   const snackbarRef = useRef<GlobalSnackbarRef>(null);
 
-  const { projectOutboundData, setProjectOutboundData } = useProjectOutboundData();
+  const { projectOutboundData, setProjectOutboundData, isLoading: projectOutboundDataIsloading } = useProjectOutboundData();
 
   // 開始撥打電話
   const startOutbound = async (projectId: string, callFlowId: string, appId: string, appSecret: string, action: 'active' | 'active' | 'start' | 'stop' | 'pause' | 'calling' | 'waiting' | 'recording') => {
@@ -402,10 +402,16 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
           </TableHead>
           <TableBody sx={{  backgroundColor: 'white' }}>
             {
-              projectOutboundData.length === 0 && 
+              projectOutboundDataIsloading ?
                 <TableRow>
                   <TableCell colSpan={8} sx={{ padding: 0 }}>
                     <LinearProgress />
+                  </TableCell>
+                </TableRow>
+              : projectOutboundData.length == 0 &&
+                <TableRow>
+                  <TableCell colSpan={8} align="center" sx={{ height: '100%', borderBottom: 'none' , color: '#888', py: 4, fontSize: '1.5rem' }}>
+                    沒有名單
                   </TableCell>
                 </TableRow>
             }

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 // 取得本機 IP domain
 const { hostname } = window.location;
@@ -9,6 +9,8 @@ const port = import.meta.env.VITE_API_PORT;
 const HTTP_HOST = `${api_protocol}://${hostname}:${port}`;
 
 export default function useUpdateVisitRecord() {
+  const [isLoading, setIsLoading] = useState(false);
+
   const updateVisitRecord = useCallback(async (
     projectId: string,
     customerId: string,
@@ -23,7 +25,7 @@ export default function useUpdateVisitRecord() {
       remindAt: string;
     }
   ) => {
-    // console.log('%c UpdateVisitRecord','font-size: 20px; font-weight: bold;');
+    setIsLoading(true);
     try {
       const response = await axios.post(`${HTTP_HOST}/api/bonsale/project/customer/visit`, {
         projectId,
@@ -39,8 +41,10 @@ export default function useUpdateVisitRecord() {
     } catch (error) {
       console.error('Error updating visit record:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  return { updateVisitRecord };
+  return { updateVisitRecord, isLoading };
 }

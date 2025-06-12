@@ -8,7 +8,7 @@ import {
   LinearProgress,
 } from '@mui/material';
 
-export default function CustomerDetailsTable({ projectCustomersDesc }: { projectCustomersDesc: ProjectCustomersDesc[] }) {
+export default function CustomerDetailsTable({ projectCustomersDesc, getBonsaleProjectIsLoading }: { projectCustomersDesc: ProjectCustomersDesc[], getBonsaleProjectIsLoading: boolean }) {
   return (
     <Table size="small" sx={{ marginTop: '16px' }}>
       <TableHead>
@@ -20,10 +20,16 @@ export default function CustomerDetailsTable({ projectCustomersDesc }: { project
       </TableHead>
       <TableBody>
         {
-          projectCustomersDesc.length === 0 && 
+          getBonsaleProjectIsLoading ?
             <TableRow>
               <TableCell colSpan={8} sx={{ padding: 0 }}>
                 <LinearProgress />
+              </TableCell>
+            </TableRow>
+          : projectCustomersDesc.length == 0 &&
+            <TableRow>
+              <TableCell colSpan={3} align="center" sx={{ borderBottom: 'none' , color: '#888', py: 4, fontSize: '1.5rem' }}>
+                沒有名單
               </TableCell>
             </TableRow>
         }

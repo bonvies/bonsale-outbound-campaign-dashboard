@@ -6,8 +6,10 @@ const useProjectOutboundData = () => {
   const { getBonsaleAutoDial } = useGetBonsaleAutoDial();
 
   const [projectOutboundData, setProjectOutboundData] = useState<ProjectOutboundDataType[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
+    setIsLoading(true);
     try {
       // 先取得第一頁，拿到總頁數
       const firstPage = await getBonsaleAutoDial(1);
@@ -45,6 +47,8 @@ const useProjectOutboundData = () => {
     } catch (error) {
       console.error('Error fetching project auto-dial data:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   }, [getBonsaleAutoDial]);
 
@@ -52,7 +56,7 @@ const useProjectOutboundData = () => {
     fetchData();
   }, [fetchData]);
 
-  return { projectOutboundData, setProjectOutboundData };
+  return { projectOutboundData, setProjectOutboundData, isLoading };
 };
 
 export default useProjectOutboundData;

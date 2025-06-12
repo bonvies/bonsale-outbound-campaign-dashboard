@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 
 // 取得本機 IP domain
 const { hostname } = window.location;
@@ -9,6 +9,8 @@ const port = import.meta.env.VITE_API_PORT;
 const HTTP_HOST = `${api_protocol}://${hostname}:${port}`;
 
 export default function usePostOutbound() {
+  const [isLoading, setIsLoading] = useState(false);
+
   const postOutbound = useCallback(async (
     projectId: string,
     callFlowId: string,
@@ -16,6 +18,7 @@ export default function usePostOutbound() {
     appSecret: string,
     action: 'active' | 'active' | 'start' | 'stop' | 'pause' | 'calling' | 'waiting' | 'recording',
   ): Promise<ToCallResponse> => {
+    setIsLoading(true);
     try {
       // 發送撥打電話的請求
       const result = await axios.post(`${HTTP_HOST}/api/projectOutbound`, {
@@ -30,8 +33,10 @@ export default function usePostOutbound() {
     } catch (error) {
       console.error('Error starting outbound:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  return { postOutbound };
+  return { postOutbound, isLoading };
 }

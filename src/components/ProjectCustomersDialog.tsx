@@ -12,7 +12,7 @@ type ProjectCustomersDialogProps = {
 export default function ProjectCustomersDialog({ onOpen, onClose, projectId }: ProjectCustomersDialogProps) {
   const [open, setOpen] = useState(false);
   const [projectCustomersDesc, setProjectCustomersDesc] = useState<ProjectCustomersDesc[]>([]);
-  const { getBonsaleProject } = useGetBonsaleProject();
+  const { getBonsaleProject, isLoading: getBonsaleProjectIsLoading } = useGetBonsaleProject();
 
   const handleClose = () => {
     setOpen(false);
@@ -55,7 +55,7 @@ export default function ProjectCustomersDialog({ onOpen, onClose, projectId }: P
       </DialogTitle>
       <DialogContent>
         <DialogContentText component="div" id="alert-dialog-description">
-          <CustomerDetailsTable projectCustomersDesc={projectCustomersDesc} />
+          <CustomerDetailsTable projectCustomersDesc={projectCustomersDesc} getBonsaleProjectIsLoading={getBonsaleProjectIsLoading} />
         </DialogContentText>
       </DialogContent>
       <DialogActions>
