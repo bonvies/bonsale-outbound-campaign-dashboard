@@ -177,7 +177,10 @@ export default function Home() {
           全部執行
         </Button> 
         <Alert severity="warning">
-          自動外撥專案執行期間暫停動作時，會同步掛斷當前通話，請警慎使用。
+          自動外撥專案執行期間 暫停/停止動作時，會同步掛斷當前通話，請警慎使用。
+        </Alert>
+        <Alert severity="warning">
+          停止撥打將不會保存當前通話的撥打狀態。
         </Alert>
       </Stack>
       <Box sx={{ height: '100%', maxHeight:'100%', overflowY: 'scroll' }}>
@@ -225,7 +228,6 @@ export default function Home() {
                 </TableRow>
             }
             {projectOutboundData.map((item, index) => {
-
               return (
                 <Fragment key={item.projectId + index}>
                   <TableRow 
@@ -310,21 +312,22 @@ export default function Home() {
                     <TableCell align='left'>
                       <Stack>
                         <Chip
-                          label={`狀態: ${
+                          label={
                             mainActionType(item.projectCallState) === 'init' ? '準備撥打' :
                             mainActionType(item.projectCallState) === 'active' ? '準備撥打' : 
                             mainActionType(item.projectCallState) === 'start' ? '開始撥號' :
                             mainActionType(item.projectCallState) === 'pause' ? '暫停撥打' :
                             mainActionType(item.projectCallState) === 'stop' ? '停止撥打' :
                             mainActionType(item.projectCallState) === 'waiting' ? '等待撥打' : 
-                            mainActionType(item.projectCallState) === 'error' ? '撥打錯誤' :
+                            mainActionType(item.projectCallState) === 'error' ? '重新嘗試' :
                             mainActionType(item.projectCallState) === 'recording' ? '撥打記錄' :
                             mainActionType(item.projectCallState) === 'calling' ? '撥打中' : 
                             mainActionType(item.projectCallState) === 'finish' ? '撥打完成' : 
                             mainActionType(item.projectCallState)
-                          }`}
+                          }
                           size="small"
                           sx={{ 
+                            minWidth: '120px',
                             marginBottom: '4px',
                             color: () => 
                               mainActionType(item.projectCallState) === 'calling' || 
@@ -334,7 +337,7 @@ export default function Home() {
                               mainActionType(item.projectCallState) === 'active' ? theme.palette.warning.color50 :
                               mainActionType(item.projectCallState) === 'calling' ? theme.palette.warning.main :
                               mainActionType(item.projectCallState) === 'waiting' ? theme.palette.warning.color300 :
-                              mainActionType(item.projectCallState) === 'error' ? theme.palette.error.main :
+                              mainActionType(item.projectCallState) === 'error' ? theme.palette.error.color100 :
                               mainActionType(item.projectCallState) === 'recording' ? theme.palette.success.color300 :
                               mainActionType(item.projectCallState) === 'finish' ? theme.palette.success.color700 :
                               'default'

@@ -39,7 +39,7 @@ export default function useConnectWebSocket({ setProjectOutboundData }: ConnectW
             // 更新專案狀態
             return {
               ...item,
-              callStatus: mainActionType(findProject.action) === 'error' ? 3 : mainActionType(findProject.action) === 'pause' ? 4 : 1,
+              callStatus: mainActionType(findProject.action) === 'pause' ? 4 : 1,
               projectCallState: findProject.action,
               projectCallData: findProject.projectCallData // 保持原有的撥打資料
             };
