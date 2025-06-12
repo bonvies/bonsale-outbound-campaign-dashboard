@@ -269,7 +269,7 @@ const connectBonsaleWebHookWebSocket = useCallback(() => {
   wsBonsaleWebHookRef.current.onclose = () => {
     console.log('Bonsale WebHook WebSocket connection closed');
   };
-}, [getOneBonsaleAutoDial, setProjectOutboundData]);
+}, [getOneBonsaleAutoDial, putOutbound, setProjectOutboundData]);
 
   // 建立 WebSocket 連線
   const connectWebSocket = useCallback(() => {

@@ -5,6 +5,7 @@ import {
   TableHead,
   TableRow,
   Chip,
+  LinearProgress,
 } from '@mui/material';
 
 export default function CustomerDetailsTable({ projectCustomersDesc }: { projectCustomersDesc: ProjectCustomersDesc[] }) {
@@ -18,6 +19,14 @@ export default function CustomerDetailsTable({ projectCustomersDesc }: { project
         </TableRow>
       </TableHead>
       <TableBody>
+        {
+          projectCustomersDesc.length === 0 && 
+            <TableRow>
+              <TableCell colSpan={8} sx={{ padding: 0 }}>
+                <LinearProgress />
+              </TableCell>
+            </TableRow>
+        }
         {projectCustomersDesc.map((desc, index) => (
           <TableRow key={index}>
             <TableCell>{desc.customer?.memberName || '未知'}</TableCell>
