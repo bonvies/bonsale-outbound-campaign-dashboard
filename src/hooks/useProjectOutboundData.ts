@@ -53,7 +53,6 @@ const useProjectOutboundData = () => {
 
   // 懶加載下一頁
   const loadMore = useCallback(() => {
-    console.warn('loadMore called', { currentPage, totalPage, isLoading });
     if (currentPage < totalPage && !isLoading) {
       const nextPage = currentPage + 1;
       setCurrentPage(nextPage);

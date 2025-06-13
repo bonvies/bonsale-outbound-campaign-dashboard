@@ -311,12 +311,14 @@ export default function Home() {
                                 <PauseIcon /> 
                               </IconButton> 
                           }
-                          <IconButton 
-                            onClick={() => handleStopOutbound(item.projectId)}
-                            disabled={item.callStatus === 0}
-                          >
-                            <StopIcon /> 
-                          </IconButton> 
+                          {item.callStatus === 4 && 
+                            <IconButton 
+                              onClick={() => handleStopOutbound(item.projectId)}
+                              disabled={!!item.projectCallData}
+                            >
+                              <StopIcon /> 
+                            </IconButton> 
+                          }
                           <IconButton 
                             onClick={() => handleExpandClick(true, item.projectId)}
                           >
