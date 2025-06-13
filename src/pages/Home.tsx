@@ -14,7 +14,8 @@ import {
   Switch,
   Button,
   LinearProgress,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -42,6 +43,7 @@ export default function Home() {
   const { patchOutbound } = usePatchOutbound();
   const { updateProject } = useUpdateProject();
 
+  
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null); // 用於跟踪當前展開的專案 ID
 
   const handleExpandClick = (isOpen: boolean, projectId?: string) => {
@@ -54,8 +56,18 @@ export default function Home() {
 
   const snackbarRef = useRef<GlobalSnackbarRef>(null);
 
-  const { projectOutboundData, setProjectOutboundData, isLoading: projectOutboundDataIsloading } = useProjectOutboundData();
+  const { projectOutboundData, setProjectOutboundData, isLoading: projectOutboundDataIsloading, loadMore, hasMore  } = useProjectOutboundData();
+  const tableBoxRef = useRef<HTMLDivElement>(null);
 
+  // 滾動到底自動加載
+  const handleScroll = () => {
+    const box = tableBoxRef.current;
+    if (!box || !hasMore) return;
+    if (box.scrollTop + box.clientHeight >= box.scrollHeight - 10) { // 10px buffer
+      loadMore();
+    }
+  };
+ 
   // 開始撥打電話
   const startOutbound = async (projectId: string, callFlowId: string, appId: string, appSecret: string, action: 'active' | 'active' | 'start' | 'stop' | 'pause' | 'calling' | 'waiting' | 'recording') => {
     await postOutbound(projectId, callFlowId, appId, appSecret, action);
@@ -183,14 +195,18 @@ export default function Home() {
           停止撥打將不會保存當前通話的撥打狀態。
         </Alert>
       </Stack>
-      <Box sx={{ height: '100%', maxHeight:'100%', overflowY: 'scroll' }}>
+      <Box 
+        ref={tableBoxRef}
+        sx={{ height: '100%', maxHeight:'100%', overflowY: 'scroll' }}
+        onScroll={handleScroll}
+      >
         <Table stickyHeader>
           <TableHead>
             <TableRow>
               <TableCell align='center' sx={{ width: '20px' }}>
                 啟用專案
               </TableCell>
-              <TableCell align='center' sx={{ width: '20px' }}>
+              <TableCell align='center' sx={{ width: '120px' }}>
                 專案名稱
               </TableCell>
               <TableCell align='center' sx={{ width: '20px' }}>
@@ -207,7 +223,7 @@ export default function Home() {
               <TableCell align='center' sx={{ width: '20px' }}>
                 撥打狀況
               </TableCell>
-                <TableCell align='center' sx={{ width: '500px' }}>
+                <TableCell align='center' sx={{ width: '400px' }}>
                   當前撥打資訊
                 </TableCell>
             </TableRow>
@@ -414,6 +430,14 @@ export default function Home() {
                 </Fragment>
               );
             })}
+            {/* 懶加載時底部 loading 標誌 */}
+            {projectOutboundDataIsloading && hasMore && (
+              <TableRow>
+                <TableCell colSpan={8} align="center" sx={{ borderBottom: 'none', py: 2 }}>
+                  <CircularProgress size={32} />
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table> 
       </Box>
