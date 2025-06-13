@@ -8,11 +8,11 @@ import Navbar from './components/Navbar';
 
 const muiTheme = createTheme(theme, custom);
 
-const { protocol, hostname } = window.location;
-// 假設 API port 寫死 3020
-const port = import.meta.env.VITE_API_PORT;
-const HTTP_HOST = `${protocol}//${hostname}:${port}`;
-console.log('HTTP_HOST:', HTTP_HOST);
+const VITE_DOMAIN = import.meta.env.VITE_DOMAIN;
+if (!localStorage.getItem('VITE_DOMAIN')) {
+  localStorage.setItem('VITE_DOMAIN', VITE_DOMAIN);
+}
+console.log('VITE_DOMAIN:', localStorage.getItem('VITE_DOMAIN') || VITE_DOMAIN);
 
 function App() {
   return (

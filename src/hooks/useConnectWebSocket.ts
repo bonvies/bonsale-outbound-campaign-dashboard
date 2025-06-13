@@ -4,12 +4,10 @@ import { useCallback, useEffect, useRef } from 'react';
 
 import { mainActionType } from '../utils/mainActionType';
 
-// 取得本機 IP domain
-const { hostname } = window.location;
-
 const port = import.meta.env.VITE_API_PORT;
 const ws_protocol = import.meta.env.VITE_WS_PROTOCOL;
-const WS_HOST = `${ws_protocol}://${hostname}:${port}`;
+const domain = localStorage.getItem('VITE_DOMAIN') || import.meta.env.VITE_DOMAIN;
+const WS_HOST = `${ws_protocol}://${domain}:${port}`;
 
 type ConnectWebSocketProps = {
   setProjectOutboundData: React.Dispatch<React.SetStateAction<ProjectOutboundDataType[]>>;

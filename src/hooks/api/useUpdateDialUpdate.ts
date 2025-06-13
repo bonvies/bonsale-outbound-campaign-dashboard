@@ -1,12 +1,10 @@
 import axios from 'axios';
 import { useCallback, useState } from 'react';
 
-// 取得本機 IP domain
-const { hostname } = window.location;
-
 const api_protocol = import.meta.env.VITE_API_PROTOCOL;
 const port = import.meta.env.VITE_API_PORT;
-const HTTP_HOST = `${api_protocol}://${hostname}:${port}`;
+const domain = localStorage.getItem('VITE_DOMAIN') || import.meta.env.VITE_DOMAIN;
+const HTTP_HOST = `${api_protocol}://${domain}:${port}`;
 
 export default function useUpdateDialUpdate() {
   const [isLoading, setIsLoading] = useState(false);
