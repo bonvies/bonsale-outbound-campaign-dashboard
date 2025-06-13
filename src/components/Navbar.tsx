@@ -18,7 +18,10 @@ function Navbar() {
         alignItems: 'center',
       }}
     >
-      <Container maxWidth='lg'>
+      <Container
+        maxWidth={false}
+        sx={{ maxWidth: (theme) => theme.breakpoints.values.laptop, width: '100%' }}
+      >
         <Typography variant='h5' fontWeight='400'>
           專案自動外撥監控面板
         </Typography>

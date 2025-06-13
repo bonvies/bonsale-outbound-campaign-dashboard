@@ -27,9 +27,20 @@ function App() {
         }}
       >
         <Box sx={{ flex: 0, flexDirection: 'column' }}>
-           <Navbar />
+          <Navbar />
         </Box>
-        <Container maxWidth='lg' sx={{ position:'relative', flex: 1, display:'flex', flexDirection: 'column', height:'100%', overflowY:'hidden' }}>
+        <Container
+          maxWidth={false}
+          sx={{
+            position:'relative',
+            flex: 1,
+            display:'flex',
+            flexDirection: 'column',
+            height:'100%',
+            overflowY:'hidden', 
+            maxWidth: (theme) => theme.breakpoints.values.laptop, width: '100%' 
+          }}
+        >
           <Router />
         </Container>
       </Box>

@@ -60,17 +60,6 @@ export default function Home() {
   const startOutbound = async (projectId: string, callFlowId: string, appId: string, appSecret: string, action: 'active' | 'active' | 'start' | 'stop' | 'pause' | 'calling' | 'waiting' | 'recording') => {
     await postOutbound(projectId, callFlowId, appId, appSecret, action);
   };
-
-  // 暫停撥打電話
-  const pauseOutbound = async (projectId: string) => {
-    await patchOutbound(projectId, 'pause');
-  };
-
-  // 停止撥打電話
-  const stopOutbound = async (projectId: string) => {
-    await patchOutbound(projectId, 'stop');
-  };
-
   const handleStartOutbound = (project: ProjectOutboundDataType) => {
     if (project.callStatus === 0) {
       startOutbound(
@@ -90,22 +79,33 @@ export default function Home() {
     }
   };
 
+  // 暫停撥打電話
+  const pauseOutbound = async (projectId: string) => {
+    await patchOutbound(projectId, 'pause');
+  };
   const handlePauseOutbound = (projectId: string) => {
     pauseOutbound(projectId);
   };
 
+  // 停止撥打電話
+  const stopOutbound = async (projectId: string) => {
+    await patchOutbound(projectId, 'stop');
+  };
   const handleStopOutbound = (projectId: string) => {
     stopOutbound(projectId);
   };
 
-  const handleAllProjectStartOutbound = async () => {
-    setProjectOutboundData(prev =>
-      prev.map(item =>
-        item.isEnable ? { ...item, callStatus: 1 } : item
-      )
-    );
+  // 全部專案開始外撥
+  const handleAllProjectStartOutbound = async (projects: ProjectOutboundDataType[]) => {
+    projects.forEach(async (project) => {
+      if (project.isEnable && project.callStatus === 0) {
+        handleStartOutbound(project);
+      }
+      
+    })
   }
 
+  // 切換專案啟用狀態
   const handleToggleProject = async (project: ProjectOutboundDataType) => {
     const { projectId, isEnable } = project;
     await updateProject(projectId, JSON.stringify(!isEnable))
@@ -167,7 +167,7 @@ export default function Home() {
       >
         <Button 
           variant="contained" 
-          onClick={handleAllProjectStartOutbound}
+          onClick={() => handleAllProjectStartOutbound(projectOutboundData)}
           sx={{
             margin: '12px 0',
             minWidth: '100px',
@@ -207,8 +207,8 @@ export default function Home() {
               <TableCell align='center' sx={{ width: '20px' }}>
                 撥打狀況
               </TableCell>
-                <TableCell align='center' sx={{ width: '250px' }}>
-                撥打詳細描述
+                <TableCell align='center' sx={{ width: '500px' }}>
+                  當前撥打資訊
                 </TableCell>
             </TableRow>
           </TableHead>
@@ -327,7 +327,7 @@ export default function Home() {
                           }
                           size="small"
                           sx={{ 
-                            minWidth: '120px',
+                            width: '80px',
                             marginBottom: '4px',
                             color: () => 
                               mainActionType(item.projectCallState) === 'calling' || 
