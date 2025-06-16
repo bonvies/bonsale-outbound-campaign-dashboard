@@ -250,7 +250,8 @@ export default function Home() {
                     key={item.projectId}
                     sx={{
                       backgroundColor: item.callStatus === 4 ? '#f5f5f5' : 'inherit',
-                      transition: 'background-color 0.3s'
+                      height: item.callStatus !== 0 ? '250px' : '100px',
+                      transition: 'all 0.3s ease-in-out',
                     }}
                   >
                     <TableCell>
