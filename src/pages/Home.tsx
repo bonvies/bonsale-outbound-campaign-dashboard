@@ -34,6 +34,7 @@ import useUpdateProject from '../hooks/api/useUpdateProject';
 
 import useConnectWebSocket from '../hooks/useConnectWebSocket';
 import useConnectBonsaleWebHookWebSocket from '../hooks/useConnectBonsaleWebHookWebSocket';
+import useTemporaryDisable from '../hooks/useTemporaryDisable';
 
 import { mainActionType } from '../utils/mainActionType';
 
@@ -42,7 +43,7 @@ export default function Home() {
   const { postOutbound } = usePostOutbound();
   const { patchOutbound } = usePatchOutbound();
   const { updateProject } = useUpdateProject();
-
+  const { disabledMap, triggerDisable } = useTemporaryDisable<string>(1000);
   
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null); // 用於跟踪當前展開的專案 ID
 
@@ -73,6 +74,7 @@ export default function Home() {
     await postOutbound(projectId, callFlowId, appId, appSecret, action);
   };
   const handleStartOutbound = (project: ProjectOutboundDataType) => {
+    triggerDisable(project.projectId); // 按下時觸發 disabled debounce
     if (project.callStatus === 0) {
       startOutbound(
         project.projectId,
@@ -96,6 +98,7 @@ export default function Home() {
     await patchOutbound(projectId, 'pause');
   };
   const handlePauseOutbound = (projectId: string) => {
+    triggerDisable(projectId);
     pauseOutbound(projectId);
   };
 
@@ -104,6 +107,7 @@ export default function Home() {
     await patchOutbound(projectId, 'stop');
   };
   const handleStopOutbound = (projectId: string) => {
+    triggerDisable(projectId);
     stopOutbound(projectId);
   };
 
@@ -273,6 +277,7 @@ export default function Home() {
                         '未知狀態'
                       } sx={{ 
                         marginBottom: '4px',
+                        width: '80px',
                         color: () => 
                           item.callStatus === 1  || 
                           item.callStatus === 2 
@@ -295,29 +300,46 @@ export default function Home() {
                           {item.callStatus === 0 || item.callStatus === 4 ? 
                             <IconButton 
                               onClick={() => handleStartOutbound(item)}
+                              disabled={!!disabledMap[item.projectId]}
                             >
-                              <PlayArrowIcon />
+                              {
+                                disabledMap[item.projectId] ?
+                                  <CircularProgress size={24} />
+                                  : <PlayArrowIcon />
+                              }
                             </IconButton> : 
                             item.callStatus === 3 ? 
                               <IconButton 
                                 onClick={() => handleStartOutbound(item)}
                               >
-                                <RestartAltIcon />
+                                {
+                                  disabledMap[item.projectId] ?
+                                    <CircularProgress size={24} />
+                                    : <RestartAltIcon />
+                                }
                               </IconButton> : 
                               <IconButton 
                                 onClick={() => handlePauseOutbound(item.projectId) }
-                                // disabled={item.projectCallData?.activeCall?.Status === 'Talking'} // 目前暫停同時也會發送掛斷電話請求, 3cx 會因為 的狀態為 agents 而限制掛斷功能 ( 回傳 403 ) 
+                                disabled={!!disabledMap[item.projectId] && item.projectCallData?.activeCall?.Status === 'Talking'} // 目前暫停同時也會發送掛斷電話請求, 3cx 會因為 的狀態為 agents 而限制掛斷功能 ( 回傳 403 ) 
                                 sx={{display: item.callStatus === 2 ? 'none' : 'block'}}
                               >
-                                <PauseIcon /> 
+                                {
+                                  disabledMap[item.projectId] ?
+                                    <CircularProgress size={24} />
+                                    : <PauseIcon /> 
+                                }
                               </IconButton> 
                           }
                           {item.callStatus === 4 && 
                             <IconButton 
                               onClick={() => handleStopOutbound(item.projectId)}
-                              disabled={!!item.projectCallData}
+                              disabled={!!disabledMap[item.projectId] && !!item.projectCallData}
                             >
-                              <StopIcon /> 
+                              {
+                                disabledMap[item.projectId] ?
+                                  <CircularProgress size={24} />
+                                  : <StopIcon /> 
+                              }
                             </IconButton> 
                           }
                           <IconButton 
