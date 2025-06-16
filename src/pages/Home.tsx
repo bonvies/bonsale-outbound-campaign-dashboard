@@ -47,6 +47,8 @@ export default function Home() {
   const { deleteOutbound } = useDeleteOutbound();
 
   const { disabledMap, triggerDisable } = useTemporaryDisable<string>(1000);
+
+  const [isAutoRestart, setIsAutoRestart] = useState(true); // 是否自動重新撥打
   
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null); // 用於跟踪當前展開的專案 ID
 
@@ -86,7 +88,7 @@ export default function Home() {
         project.appSecret,
         'active'
       );
-    } else if (project.callStatus === 4) {
+    } else if (project.callStatus === 4 || project.callStatus === 3) {
       patchOutbound(
         project.projectId,
         'start'
@@ -155,7 +157,7 @@ export default function Home() {
   useConnectBonsaleWebHookWebSocket({ setProjectOutboundData });
 
   // 建立 WebSocket 連線
-  useConnectWebSocket({ setProjectOutboundData });
+  useConnectWebSocket({ setProjectOutboundData, isAutoRestart });
 
   // 為了避免用戶重新整理導致撥號中斷而設置的警告
   useEffect(() => {
@@ -184,23 +186,34 @@ export default function Home() {
           borderBottom: '1px solid #eee',
         }}
       >
-        <Button 
-          variant="contained" 
-          onClick={() => handleAllProjectStartOutbound(projectOutboundData)}
-          sx={{
-            margin: '12px 0',
-            minWidth: '100px',
-            bgcolor: (theme) => theme.palette.secondary.main, 
-          }}
-        >
-          全部執行
-        </Button> 
-        <Alert severity="warning">
-          自動外撥專案執行期間 暫停/停止動作時，會同步掛斷當前通話，請警慎使用。
-        </Alert>
-        <Alert severity="warning">
-          停止撥打將不會保存當前通話的撥打狀態。
-        </Alert>
+        <Stack spacing={1}>
+          <Stack direction="row" spacing={1}>
+            <Alert severity="warning">
+              自動外撥專案執行期間 暫停動作時，會同步掛斷當前通話，請警慎使用。
+            </Alert>
+            <Alert severity="info">
+              暫停動作後可使用停止動作，將專案恢復成初始狀態。
+            </Alert>
+          </Stack>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Button 
+              variant="contained" 
+              onClick={() => handleAllProjectStartOutbound(projectOutboundData)}
+              sx={{
+                margin: '12px 0',
+                minWidth: '100px',
+                bgcolor: (theme) => theme.palette.secondary.main, 
+              }}
+            >
+              全部執行
+            </Button> 
+            <Switch
+              checked={isAutoRestart}
+              onChange={() => setIsAutoRestart((prev) => !prev)}
+            />
+            <span>當錯誤時是否自動重新撥打</span>
+          </Stack>
+        </Stack>
       </Stack>
       <Box 
         ref={tableBoxRef}
@@ -256,9 +269,9 @@ export default function Home() {
                   <TableRow 
                     key={item.projectId}
                     sx={{
-                      backgroundColor: item.callStatus === 4 ? '#f5f5f5' : 'inherit',
+                      backgroundColor: item.callStatus === 4 ? '#f5f5f5' : item.callStatus === 3 ? '#FFF4F4' : 'inherit',
                       height: item.callStatus !== 0 ? '250px' : '100px',
-                      transition: 'all 0.3s ease-in-out',
+                      transition: 'all 0.3s ease-in-out'
                     }}
                   >
                     <TableCell>
@@ -363,7 +376,8 @@ export default function Home() {
                             mainActionType(item.projectCallState) === 'pause' ? '暫停撥打' :
                             mainActionType(item.projectCallState) === 'stop' ? '停止撥打' :
                             mainActionType(item.projectCallState) === 'waiting' ? '等待撥打' : 
-                            mainActionType(item.projectCallState) === 'error' ? '重新嘗試' :
+                            mainActionType(item.projectCallState) === 'error' ? 
+                            isAutoRestart ? '重新嘗試' : '撥打失敗' :
                             mainActionType(item.projectCallState) === 'recording' ? '撥打記錄' :
                             mainActionType(item.projectCallState) === 'calling' ? '撥打中' : 
                             mainActionType(item.projectCallState) === 'finish' ? '撥打完成' : 
@@ -381,7 +395,8 @@ export default function Home() {
                               mainActionType(item.projectCallState) === 'active' ? theme.palette.warning.color50 :
                               mainActionType(item.projectCallState) === 'calling' ? theme.palette.warning.main :
                               mainActionType(item.projectCallState) === 'waiting' ? theme.palette.warning.color300 :
-                              mainActionType(item.projectCallState) === 'error' ? theme.palette.error.color100 :
+                              mainActionType(item.projectCallState) === 'error' ?
+                              isAutoRestart ? theme.palette.error.color100 : theme.palette.error.main :
                               mainActionType(item.projectCallState) === 'recording' ? theme.palette.success.color300 :
                               mainActionType(item.projectCallState) === 'finish' ? theme.palette.success.color700 :
                               'default'
