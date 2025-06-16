@@ -44,7 +44,6 @@ export default function useConnectWebSocket({ setProjectOutboundData, isAutoRest
     };
 
     wsRef.current.onmessage = (event) => {
-      console.log('isAutoRestart', isAutoRestart);
       // websocket 會回傳一個陣列，裡面是我送出專案撥打電話的請求 每隔 3 秒 回傳他撥打活躍的狀態
       const message = JSON.parse(event.data) as ProjectOutboundWsMessage[];
       console.log('WebSocket message received:', message);
