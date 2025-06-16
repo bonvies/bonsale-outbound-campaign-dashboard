@@ -29,7 +29,7 @@ export default function usePostOutbound() {
       });
       return result.data as ToCallResponse;
     } catch (error) {
-      console.error('Error starting outbound:', error);
+      console.error('Error post outbound:', error);
       throw error;
     } finally {
       setIsLoading(false);

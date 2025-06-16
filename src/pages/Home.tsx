@@ -31,6 +31,7 @@ import useProjectOutboundData from '../hooks/useProjectOutboundData';
 import usePostOutbound from '../hooks/api/usePostOutbound';
 import usePatchOutbound from '../hooks/api/usePatchOutbound';
 import useUpdateProject from '../hooks/api/useUpdateProject';
+import useDeleteOutbound from '../hooks/api/useDeleteOutbound';
 
 import useConnectWebSocket from '../hooks/useConnectWebSocket';
 import useConnectBonsaleWebHookWebSocket from '../hooks/useConnectBonsaleWebHookWebSocket';
@@ -43,6 +44,8 @@ export default function Home() {
   const { postOutbound } = usePostOutbound();
   const { patchOutbound } = usePatchOutbound();
   const { updateProject } = useUpdateProject();
+  const { deleteOutbound } = useDeleteOutbound();
+
   const { disabledMap, triggerDisable } = useTemporaryDisable<string>(1000);
   
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null); // 用於跟踪當前展開的專案 ID
@@ -104,7 +107,7 @@ export default function Home() {
 
   // 停止撥打電話
   const stopOutbound = async (projectId: string) => {
-    await patchOutbound(projectId, 'stop');
+    await deleteOutbound(projectId);
   };
   const handleStopOutbound = (projectId: string) => {
     triggerDisable(projectId);

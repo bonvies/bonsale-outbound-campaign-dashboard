@@ -28,7 +28,7 @@ export default function usePutOutbound() {
       });
       return result.data as ToCallResponse;
     } catch (error) {
-      console.error('Error starting outbound:', error);
+      console.error('Error put outbound:', error);
       throw error;
     } finally {
       setIsLoading(false);
