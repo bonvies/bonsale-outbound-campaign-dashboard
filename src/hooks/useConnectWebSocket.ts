@@ -10,9 +10,6 @@ const ws_protocol = import.meta.env.VITE_WS_PROTOCOL;
 const domain = localStorage.getItem('VITE_DOMAIN') || import.meta.env.VITE_DOMAIN;
 const WS_HOST = `${ws_protocol}://${domain}:${port}`;
 
-
-
-
 type ConnectWebSocketProps = {
   setProjectOutboundData: React.Dispatch<React.SetStateAction<ProjectOutboundDataType[]>>;
   isAutoRestart?: boolean;  // 是否自動重新撥打

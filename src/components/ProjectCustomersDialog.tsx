@@ -1,7 +1,8 @@
-import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
+import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Pagination, Stack } from '@mui/material';
 import { useEffect, useState, useCallback } from 'react';
 import CustomerDetailsTable from './CustomerDetailsTable';
 import useGetBonsaleProject from '../hooks/api/useGetBonsaleProject';
+import useGetBonsaleProjectCountCustomer from '../hooks/api/useGetBonsaleProjectCountCustomer';
 
 type ProjectCustomersDialogProps = {
   onOpen: boolean;
@@ -12,7 +13,10 @@ type ProjectCustomersDialogProps = {
 export default function ProjectCustomersDialog({ onOpen, onClose, projectId }: ProjectCustomersDialogProps) {
   const [open, setOpen] = useState(false);
   const [projectCustomersDesc, setProjectCustomersDesc] = useState<ProjectCustomersDesc[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const { getBonsaleProject, isLoading: getBonsaleProjectIsLoading } = useGetBonsaleProject();
+  const { getBonsaleProjectCountCustomer } = useGetBonsaleProjectCountCustomer();
 
   const handleClose = () => {
     setOpen(false);
@@ -21,20 +25,32 @@ export default function ProjectCustomersDialog({ onOpen, onClose, projectId }: P
     }
   };
 
-  const fetchCustomers = useCallback(async () => {
-    if (projectId) {
-      const customers = await getBonsaleProject(projectId);
-      const projectCustomersDesc = customers.list.map((customer: Project) => customer);
-      setProjectCustomersDesc(projectCustomersDesc);
+const fetchCustomerCount = useCallback(async () => {
+  if (!projectId) return;
+  try {
+    const count = await getBonsaleProjectCountCustomer(projectId);
+    console.log('Customer count:', count.totalPage);
+    setTotalPages(count.totalPage); // 這裡要用 totalPage（單數）
+  } catch (error) {
+    console.error('Error fetching customer count:', error);
+  }
+}, [getBonsaleProjectCountCustomer, projectId]);
+
+  const fetchCustomers = useCallback(async (pageNum = 1) => {
+    if (!projectId) return;
+    const customers = await getBonsaleProject(projectId, pageNum);
+    setProjectCustomersDesc(customers.list);
+  }, [getBonsaleProject, projectId]);
+
+  useEffect(() => {
+    if (onOpen && projectId) {
+      setPage(1);
+      fetchCustomerCount();
+      fetchCustomers(1);
     } else {
       setProjectCustomersDesc([]);
     }
-  },[getBonsaleProject, projectId]);
-
-  useEffect(() => {
-    // 將專案中的客戶電話號碼提取出來
-    fetchCustomers();
-  }, [fetchCustomers, projectId]);
+  }, [onOpen, projectId, fetchCustomers, fetchCustomerCount]);
 
   useEffect(() => {
     setOpen(onOpen);
@@ -55,6 +71,18 @@ export default function ProjectCustomersDialog({ onOpen, onClose, projectId }: P
       </DialogTitle>
       <DialogContent>
         <DialogContentText component="div" id="alert-dialog-description">
+          <Stack direction="row" justifyContent="end" sx={{ mt: 2 }}>
+            <Pagination
+              count={totalPages}
+              page={page}
+              onChange={(_, value) => {
+                setPage(value);
+                fetchCustomers(value); // 這裡載入新頁資料
+              }}
+              color="primary"
+              size="small"
+            />
+          </Stack>
           <CustomerDetailsTable projectCustomersDesc={projectCustomersDesc} getBonsaleProjectIsLoading={getBonsaleProjectIsLoading} />
         </DialogContentText>
       </DialogContent>
