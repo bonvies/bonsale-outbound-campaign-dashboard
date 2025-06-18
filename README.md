@@ -1,6 +1,6 @@
 # bonsale-outbound-campaign-dashboard
 
-**Version: v0.1.0**
+**Version: v0.1.1**
 
 ## Environment Variables (.env)
 
