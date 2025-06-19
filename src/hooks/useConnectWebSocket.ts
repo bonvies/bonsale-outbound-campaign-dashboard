@@ -19,7 +19,7 @@ export default function useConnectWebSocket({ setProjectOutboundData, isAutoRest
   const wsRef = useRef<WebSocket | null>(null); // 使用 useRef 管理 WebSocket 實例
   const { patchOutbound } = usePatchOutbound();
 
-  const restartProjectOutbound = (messages: ProjectOutboundWsMessage[]) => {
+  const restartProjectOutbound = useCallback((messages: ProjectOutboundWsMessage[]) => {
     messages.forEach(async (message: ProjectOutboundWsMessage) => {
       if (mainActionType(message.action) === 'error') {
         // 如果收到的 Action 是 'error' 且外部設定 自動重新撥打，則重設狀態為 'start'
@@ -28,7 +28,7 @@ export default function useConnectWebSocket({ setProjectOutboundData, isAutoRest
         await patchOutbound(message.projectId, 'start')
       }
     });
-  };
+  }, [patchOutbound]);
 
   // 建立 WebSocket 連線
   const connectWebSocket = useCallback(() => {
@@ -80,7 +80,7 @@ export default function useConnectWebSocket({ setProjectOutboundData, isAutoRest
     wsRef.current.onclose = () => {
       console.log('WebSocket connection closed');
     };
-  }, [setProjectOutboundData, isAutoRestart]);
+  }, [isAutoRestart, setProjectOutboundData, restartProjectOutbound]);
 
   useEffect(() => {
     wsRef.current = new WebSocket(`${WS_HOST}/ws/projectOutbound`); // 初始化 WebSocket
