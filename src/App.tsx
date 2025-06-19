@@ -43,6 +43,21 @@ function App() {
         >
           <Router />
         </Container>
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: 8,
+            right: 16,
+            fontSize: '0.75rem',
+            color: (theme) => theme.palette.text.secondary,
+            opacity: 0.7,
+            zIndex: 10,
+            pointerEvents: 'none',
+          }}
+        >
+          v0.1.3
+        </Box>
+
       </Box>
     </ThemeProvider>
   )
