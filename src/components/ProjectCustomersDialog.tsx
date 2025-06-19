@@ -77,6 +77,7 @@ const fetchCustomerCount = useCallback(async () => {
               page={page}
               onChange={(_, value) => {
                 setPage(value);
+                fetchCustomerCount();
                 fetchCustomers(value); // 這裡載入新頁資料
               }}
               color="primary"
