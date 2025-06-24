@@ -5,10 +5,14 @@ import usePutOutbound from '../hooks/api/usePutOutbound';
 
 import useGetOneBonsaleAutoDial from '../hooks/api/useGetOneBonsaleAutoDial';
 
-const port = import.meta.env.VITE_API_PORT;
+// 取得本機 IP domain
+const { hostname } = window.location;
 const ws_protocol = import.meta.env.VITE_WS_PROTOCOL;
-const domain = localStorage.getItem('VITE_PROJECT_OUTBOUND_DOMAIN') || import.meta.env.VITE_PROJECT_OUTBOUND_DOMAIN
-const WS_HOST = `${ws_protocol}://${domain}:${port}`;
+const port = import.meta.env.VITE_API_PORT;
+const domain = import.meta.env.VITE_DOMAIN;
+const WS_HOST = domain === 'localhost'? `${ws_protocol}://${hostname}:${port}` :`${ws_protocol}://${domain}:${port}`;
+
+
 
 type ConnectBonsaleWebHookWebSocketProps = {
   setProjectOutboundData: React.Dispatch<React.SetStateAction<ProjectOutboundDataType[]>>;

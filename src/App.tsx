@@ -8,11 +8,13 @@ import Navbar from './components/Navbar';
 
 const muiTheme = createTheme(theme, custom);
 
-const VITE_DOMAIN = import.meta.env.VITE_DOMAIN;
-if (!localStorage.getItem('VITE_DOMAIN')) {
-  localStorage.setItem('VITE_DOMAIN', VITE_DOMAIN);
-}
-console.log('VITE_DOMAIN:', localStorage.getItem('VITE_DOMAIN') || VITE_DOMAIN);
+// 取得本機 IP domain
+const { hostname } = window.location;
+const api_protocol = import.meta.env.VITE_API_PROTOCOL;
+const port = import.meta.env.VITE_API_PORT;
+const domain = import.meta.env.VITE_DOMAIN;
+const HTTP_HOST = domain === 'localhost'? `${api_protocol}://${hostname}:${port}` :`${api_protocol}://${domain}:${port}`;
+console.log('HTTP_HOST:', HTTP_HOST);
 
 function App() {
   return (
