@@ -377,6 +377,7 @@ export default function Home() {
                             mainActionType(item.projectCallState) === 'stop' ? '停止撥打' :
                             mainActionType(item.projectCallState) === 'waiting' ? '等待撥打' : 
                             mainActionType(item.projectCallState) === 'error' ? 
+                            item.projectCallState === 'error - notAvailable' ? '人員勿擾' :
                             isAutoRestart ? '重新嘗試' : '撥打失敗' :
                             mainActionType(item.projectCallState) === 'recording' ? '撥打記錄' :
                             mainActionType(item.projectCallState) === 'calling' ? '撥打中' : 
@@ -396,6 +397,7 @@ export default function Home() {
                               mainActionType(item.projectCallState) === 'calling' ? theme.palette.warning.main :
                               mainActionType(item.projectCallState) === 'waiting' ? theme.palette.warning.color300 :
                               mainActionType(item.projectCallState) === 'error' ?
+                              item.projectCallState === 'error - notAvailable' ? theme.palette.warning.color300 :
                               isAutoRestart ? theme.palette.error.color100 : theme.palette.error.main :
                               mainActionType(item.projectCallState) === 'recording' ? theme.palette.success.color300 :
                               mainActionType(item.projectCallState) === 'finish' ? theme.palette.success.color700 :

@@ -304,7 +304,7 @@ declare global {
 
   interface ProjectOutboundWsMessage {
     projectId: string,
-    action: 'active' | 'active' | 'start' | 'stop' | 'pause' | 'paused' | 'calling' | 'waiting' | 'recording',
+    action: `${'active' | 'start' | 'stop' | 'pause' | 'paused' | 'calling' | 'waiting' | 'recording'}${'' | ` - ${string}`}`, // 可以添加後綴來表示不同的狀態
     callFlowId: string,
     projectCallData: {
       id: string;

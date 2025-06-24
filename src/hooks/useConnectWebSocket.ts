@@ -51,6 +51,14 @@ export default function useConnectWebSocket({ setProjectOutboundData, isAutoRest
       if (isAutoRestart) {
         restartProjectOutbound(message);
       }
+      // 如果收到的 Action 是 'error - notAvailable'，這個錯誤是特殊的 
+      // 代表該撥接人員設定勿擾 此時不管有沒有 自動重新撥打，都會重設狀態
+      message.forEach((item) => {
+        if ((item.action as string) === 'error - notAvailable') {
+          console.log(`Project ${item.projectId} is not available, resetting status...`);
+          patchOutbound(item.projectId, 'start'); // 重設狀態為 'reset'
+        }
+      })
       
       setProjectOutboundData(prevProjectOutboundData => {
         return prevProjectOutboundData.map((item) => {
@@ -60,7 +68,7 @@ export default function useConnectWebSocket({ setProjectOutboundData, isAutoRest
             return {
               ...item,
               callStatus: mainActionType(findProject.action) === 'pause' ? 4 : 
-              (mainActionType(findProject.action) === 'error' && !isAutoRestart) ? 3 : 1,
+              (mainActionType(findProject.action) === 'error' && (findProject.action as string) !== 'error - notAvailable' && !isAutoRestart) ? 3 : 1,
               projectCallState: findProject.action,
               projectCallData: findProject.projectCallData // 保持原有的撥打資料
             };
@@ -82,7 +90,7 @@ export default function useConnectWebSocket({ setProjectOutboundData, isAutoRest
     wsRef.current.onclose = () => {
       console.log('WebSocket connection closed');
     };
-  }, [isAutoRestart, setProjectOutboundData, restartProjectOutbound]);
+  }, [isAutoRestart, setProjectOutboundData, restartProjectOutbound, patchOutbound]);
 
   useEffect(() => {
     wsRef.current = new WebSocket(`${WS_HOST}/ws/projectOutbound`); // 初始化 WebSocket
