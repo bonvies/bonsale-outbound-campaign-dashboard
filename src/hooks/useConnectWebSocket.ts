@@ -20,12 +20,29 @@ type ConnectWebSocketProps = {
 export default function useConnectWebSocket({ setProjectOutboundData, isAutoRestart = true }: ConnectWebSocketProps) {
   const wsRef = useRef<WebSocket | null>(null); // 使用 useRef 管理 WebSocket 實例
   const { patchOutbound } = usePatchOutbound();
+  const lastRestartTimeRef = useRef<Record<string, number>>({}); // 記錄每個專案最後重啟時間
 
   const restartProjectOutbound = useCallback((messages: ProjectOutboundWsMessage[]) => {
     messages.forEach(async (message: ProjectOutboundWsMessage) => {
       if (mainActionType(message.action) === 'error') {
+        // 排除 'error - notAvailable'，因為它會在下面單獨處理
+        if ((message.action as string) === 'error - notAvailable') {
+          return; // 跳過，讓下面的邏輯處理
+        }
+        
+        // 防抖：避免短時間內重複重設狀態同一個專案
+        const now = Date.now();
+        const lastRestartTime = lastRestartTimeRef.current[message.projectId] || 0;
+        const RESTART_COOLDOWN = 1000; // 1秒冷卻時間
+        // 如果距離上次重啟時間小於冷卻時間，則跳過重設狀態
+        if (now - lastRestartTime < RESTART_COOLDOWN) {
+          console.log(`Project ${message.projectId} restart skipped due to cooldown`);
+          return;
+        }
+        
         // 如果收到的 Action 是 'error' 且外部設定 自動重新撥打，則重設狀態為 'start'
         console.log(`Project ${message.projectId} encountered an error, restarting...`);
+        lastRestartTimeRef.current[message.projectId] = now;
         // 這裡可以添加重啟專案撥打的邏輯
         await patchOutbound(message.projectId, 'start')
       }
