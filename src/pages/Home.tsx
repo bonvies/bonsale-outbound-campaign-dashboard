@@ -36,6 +36,8 @@ import useDeleteOutbound from '../hooks/api/useDeleteOutbound';
 import useConnectWebSocket from '../hooks/useConnectWebSocket';
 import useConnectBonsaleWebHookWebSocket from '../hooks/useConnectBonsaleWebHookWebSocket';
 import useTemporaryDisable from '../hooks/useTemporaryDisable';
+import useGetIsProjectErrorAutoRestart from '../hooks/api/useGetIsProjectErrorAutoRestart';
+import usePutIsProjectErrorAutoRestart from '../hooks/api/usePutIsProjectErrorAutoRestart';
 
 import { mainActionType } from '../utils/mainActionType';
 
@@ -45,10 +47,12 @@ export default function Home() {
   const { patchOutbound } = usePatchOutbound();
   const { updateProject } = useUpdateProject();
   const { deleteOutbound } = useDeleteOutbound();
+  const { getIsProjectErrorAutoRestart } = useGetIsProjectErrorAutoRestart();
+  const { putIsProjectErrorAutoRestart } = usePutIsProjectErrorAutoRestart();
 
   const { disabledMap, triggerDisable } = useTemporaryDisable<string>(1000);
 
-  const [isAutoRestart, setIsAutoRestart] = useState(true); // 是否自動重新撥打
+  const [isAutoRestart, setIsAutoRestart] = useState(false); // 是否自動重新撥打
   
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null); // 用於跟踪當前展開的專案 ID
 
@@ -159,17 +163,26 @@ export default function Home() {
   // 建立 WebSocket 連線
   useConnectWebSocket({ setProjectOutboundData, isAutoRestart });
 
-  // 為了避免用戶重新整理導致撥號中斷而設置的警告
-  useEffect(() => {
-    const unloadCallback = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = ""; // Chrome requires this to show the confirmation dialog
-      return ""; // For other browsers
-    };
+  const handleToggleIsAutoRestart = async (value: boolean) => {
+    try {
+      await putIsProjectErrorAutoRestart(value);
+      snackbarRef.current?.showSnackbar(`已設定當錯誤時自動重新撥打為 ${value ? '啟用' : '停用'}`, 'success');
+      setIsAutoRestart(value);
+    } catch (error) {
+      console.error('Error updating auto-restart setting:', error);
+      snackbarRef.current?.showSnackbar('更新自動重新撥打設定失敗', 'error');
+    }
+  };
 
-    window.addEventListener("beforeunload", unloadCallback);
-    return () => window.removeEventListener("beforeunload", unloadCallback);
-  }, []);
+  // 抓取後端是否自動重新撥打
+  useEffect(() => {
+    const fetchIsProjectErrorAutoRestart = async () => {
+      const data = await getIsProjectErrorAutoRestart();
+      console.log('Fetched isProjectErrorAutoRestart:', data);
+      setIsAutoRestart(data.isProjectErrorAutoRestart);
+    };
+    fetchIsProjectErrorAutoRestart();
+  }, [getIsProjectErrorAutoRestart]);
     
   return (
     <>
@@ -209,7 +222,7 @@ export default function Home() {
             </Button> 
             <Switch
               checked={isAutoRestart}
-              onChange={() => setIsAutoRestart((prev) => !prev)}
+              onChange={(_event, checked) => handleToggleIsAutoRestart(checked)}
             />
             <span>當錯誤時是否自動重新撥打</span>
           </Stack>

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { mainActionType } from '../utils/mainActionType';
-import usePatchOutbound from './api/usePatchOutbound';
 
 // 取得本機 IP domain
 const { hostname } = window.location;
@@ -19,35 +18,6 @@ type ConnectWebSocketProps = {
 
 export default function useConnectWebSocket({ setProjectOutboundData, isAutoRestart = true }: ConnectWebSocketProps) {
   const wsRef = useRef<WebSocket | null>(null); // 使用 useRef 管理 WebSocket 實例
-  const { patchOutbound } = usePatchOutbound();
-  const lastRestartTimeRef = useRef<Record<string, number>>({}); // 記錄每個專案最後重啟時間
-
-  const restartProjectOutbound = useCallback((messages: ProjectOutboundWsMessage[]) => {
-    messages.forEach(async (message: ProjectOutboundWsMessage) => {
-      if (mainActionType(message.action) === 'error') {
-        // 排除 'error - notAvailable'，因為它會在下面單獨處理
-        if ((message.action as string) === 'error - notAvailable') {
-          return; // 跳過，讓下面的邏輯處理
-        }
-        
-        // 防抖：避免短時間內重複重設狀態同一個專案
-        const now = Date.now();
-        const lastRestartTime = lastRestartTimeRef.current[message.projectId] || 0;
-        const RESTART_COOLDOWN = 1000; // 1秒冷卻時間
-        // 如果距離上次重啟時間小於冷卻時間，則跳過重設狀態
-        if (now - lastRestartTime < RESTART_COOLDOWN) {
-          console.log(`Project ${message.projectId} restart skipped due to cooldown`);
-          return;
-        }
-        
-        // 如果收到的 Action 是 'error' 且外部設定 自動重新撥打，則重設狀態為 'start'
-        console.log(`Project ${message.projectId} encountered an error, restarting...`);
-        lastRestartTimeRef.current[message.projectId] = now;
-        // 這裡可以添加重啟專案撥打的邏輯
-        await patchOutbound(message.projectId, 'start')
-      }
-    });
-  }, [patchOutbound]);
 
   // 建立 WebSocket 連線
   const connectWebSocket = useCallback(() => {
@@ -63,19 +33,6 @@ export default function useConnectWebSocket({ setProjectOutboundData, isAutoRest
       // websocket 會回傳一個陣列，裡面是我送出專案撥打電話的請求 每隔 3 秒 回傳他撥打活躍的狀態
       const message = JSON.parse(event.data) as ProjectOutboundWsMessage[];
       console.log('WebSocket message received:', message);
-
-      // 如果收到的 Action 是 'error' 且外部設定 自動重新撥打，則重設狀態為 'start'
-      if (isAutoRestart) {
-        restartProjectOutbound(message);
-      }
-      // 如果收到的 Action 是 'error - notAvailable'，這個錯誤是特殊的 
-      // 代表該撥接人員設定勿擾 此時不管有沒有 自動重新撥打，都會重設狀態
-      message.forEach((item) => {
-        if ((item.action as string) === 'error - notAvailable') {
-          console.log(`Project ${item.projectId} is not available, resetting status...`);
-          patchOutbound(item.projectId, 'start'); // 重設狀態為 'reset'
-        }
-      })
       
       setProjectOutboundData(prevProjectOutboundData => {
         return prevProjectOutboundData.map((item) => {
@@ -107,7 +64,7 @@ export default function useConnectWebSocket({ setProjectOutboundData, isAutoRest
     wsRef.current.onclose = () => {
       console.log('WebSocket connection closed');
     };
-  }, [isAutoRestart, setProjectOutboundData, restartProjectOutbound, patchOutbound]);
+  }, [isAutoRestart, setProjectOutboundData]);
 
   useEffect(() => {
     wsRef.current = new WebSocket(`${WS_HOST}/ws/projectOutbound`); // 初始化 WebSocket
