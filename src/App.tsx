@@ -57,7 +57,7 @@ function App() {
             pointerEvents: 'none',
           }}
         >
-          v0.1.6
+          v0.1.7
         </Box>
 
       </Box>
